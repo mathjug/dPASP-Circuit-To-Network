@@ -1,0 +1,11 @@
+{
+    "description": "(A OR B) AND ((C OR D) OR E)",
+    "inputs": ["A", "B", "C", "D", "E"],
+    "gates": [
+        {"id": "G1", "type": "OR", "inputs": ["A", "B"]},
+        {"id": "G2", "type": "OR", "inputs": ["C", "D"]},
+        {"id": "G3", "type": "OR", "inputs": ["G2", "E"]},
+        {"id": "G4", "type": "AND", "inputs": ["G1", "G3"]}
+    ],
+    "output": "G4"
+}
