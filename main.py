@@ -16,7 +16,7 @@ def main():
 
     # NNF --> NN
     nn_model = NNFToNN(nodeDict[rootId])
-    print(nn_model)
+    print(nn_model.model)
 
 if __name__ == "__main__":
     main()
