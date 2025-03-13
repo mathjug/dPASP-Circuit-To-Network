@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import json
+from load_inputs import load_inputs
 
 class ORNode(nn.Module):
     """Implements an OR gate using max operation."""
@@ -37,3 +38,14 @@ class LogicCircuit(nn.Module):
             values[gate["id"]] = self.nodes[gate["id"]](gate_inputs)
 
         return values[self.circuit["output"]]
+
+def main():
+    circuit_file = "examples/example_1/example_circuit_1.json"
+    circuit = LogicCircuit(circuit_file)
+    input_file = "examples/example_1/input_circuit_1.csv"
+    input_circuit = load_inputs(input_file, circuit.circuit["inputs"])
+    output = circuit(input_circuit)
+    print(output)
+
+if __name__ == "__main__":
+    main()
