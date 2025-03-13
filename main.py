@@ -1,15 +1,22 @@
-from logic_circuits.logic_circuit import LogicCircuit
-from logic_circuits.load_inputs import load_inputs
+from src.pasp2cnf.pasp2cnf import pasp2cnf
+from src.nnf2nn.nnf import parse
+from src.nnf2nn.nnf_to_neural_network import NNFToNN
+from src.cnf2nnf.cnf2nnf import cnf2nnf
 
 def main():
-    circuit_file = "logic_circuits/examples/example_1/example_circuit_1.json" # (A ∨ B) ∧ ((C ∨ D) ∨ E)
-    input_file = "logic_circuits/examples/example_1/input_circuit_1.csv"
+    # PASP --> CNF
+    filename, symbols = pasp2cnf('examples/smoke.pasp')
+    
+    # CNF --> NNF
+    # filename = cnf2nnf(filename, 'src/cnf2nnf/c2d_linux')
+    filename = 'examples/smoke.pasp.cnf.nnf'
 
-    network = LogicCircuit(circuit_file)
-    X = load_inputs(input_file, network.circuit["inputs"])
+    # NNF --> NNF (in memory)
+    rootId, _, nodeDict, nvars = parse(filename)
 
-    output = (network(X) > 0.5).bool()
-    print("Output:\n", output)
+    # NNF --> NN
+    nn_model = NNFToNN(nodeDict[rootId])
+    print(nn_model)
 
 if __name__ == "__main__":
     main()
