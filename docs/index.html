@@ -2,43 +2,145 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Trabalho de Conclusão de Curso - USP</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TCC - Matheus Jurgensen</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
   <header>
-    <h1>Meu TCC - Ciência da Computação - USP</h1>
+    <h1>Trabalho de Conclusão de Curso</h1>
+    <h2>Matheus Jurgensen</h2>
+    <p>Bacharelado em Ciência da Computação - Universidade de São Paulo (USP)</p>
+    <p><strong>Orientador:</strong> Prof. Dr. Denis Deratani Mauá</p>
+    <p><strong>Co-orientador:</strong> Jonas Rodrigues Lima Gonçalves</p>
   </header>
 
   <main>
     <section>
-      <h2>Sobre o Projeto</h2>
+      <h2>Introdução</h2>
       <p>
-        Este site apresenta informações sobre o meu Trabalho de Conclusão de Curso (TCC) 
-        realizado no curso de Bacharelado em Ciência da Computação da Universidade de São Paulo (USP).
+        A <strong>programação neuro-simbólica</strong> busca integrar duas abordagens clássicas da inteligência artificial:
+        os <strong>sistemas simbólicos</strong> — que oferecem representação explícita de conhecimento, interpretabilidade e capacidade de raciocínio lógico —
+        e os <strong>modelos baseados em redes neurais artificiais</strong> — que se destacam por sua capacidade de generalização e escalabilidade computacional, devido
+        a uma natural compatibilidade com execução paralela em GPU e diferenciação automática.
+        Dentro dessa área, a <strong>programação lógico-probabilística</strong> fornece uma base formal e expressiva para modelar conhecimento incerto,
+        combinando lógica de primeira ordem com inferência probabilística.
+      </p>
+      <p>
+        Este trabalho tem como objetivo desenvolver e avaliar estratégias de <strong>compilação de circuitos lógicos e probabilísticos</strong>,
+        especialmente aqueles na forma <strong>sd-DNNF</strong> (<em>smooth deterministic decomposable negation normal form</em>),
+        para representações <strong>diferenciáveis e compatíveis com frameworks como <em>PyTorch</em></strong>.
+        Ao transformar circuitos simbólicos em arquiteturas neurais otimizadas, pretende-se viabilizar o treinamento e a execução
+        eficiente de modelos neuro-simbólicos, aproveitando os pontos fortes de ambos os paradigmas. Os resultados esperados incluem
+        contribuições metodológicas e implementações que podem facilitar o uso prático desses sistemas híbridos, beneficiando tanto a pesquisa acadêmica
+        quanto aplicações em áreas como sistemas inteligentes, robótica e aprendizado simbólico.
       </p>
     </section>
 
     <section>
-      <h2>Resumo</h2>
+      <h2>Escopo</h2>
       <p>
-        <!-- Coloque aqui o resumo do seu TCC -->
-        Este trabalho aborda...
+        O escopo deste trabalho é o <strong>aceleramento de sistemas neuro-simbólicos</strong> por meio da
+        <strong>compilação de circuitos lógicos diferenciáveis</strong>, em especial da classe
+        <strong>sd-DNNF (smooth deterministic decomposable negation normal form)</strong>, para representações computacionais compatíveis
+        com frameworks como <strong>PyTorch</strong>. A proposta busca permitir a execução eficiente desses circuitos, explorando
+        <strong>paralelismo em GPU</strong> e <strong>diferenciação automática</strong>, com o objetivo de desenvolver
+        uma base sólida e expansível para sistemas neuro-simbólicos modernos.
       </p>
+    </section>
+
+    <section>
+      <h2>Objetivos</h2>
+      <p>O objetivo principal deste trabalho é investigar e implementar diferentes estratégias de transformação de <strong>circuitos lógicos sd-DNNF</strong> em modelos baseados em <strong>redes neurais</strong> para execução em Python.</p>
+      <ul>
+        <li>Projetar, implementar e comparar diferentes abordagens de conversão:</li>
+        <ul>
+          <li><strong>Abordagem trivial</strong>: substituição direta de portas AND por nós de produto e portas OR por nós de soma</li>
+          <li><strong>Arquitetura neural em camadas</strong>: criação de redes com camadas intercaladas de soma e produto</li>
+          <li><strong>Abordagem matricial</strong>: conversão dos circuitos em operações vetoriais e tensoriais utilizando, por exemplo, a API do PyTorch</li>
+        </ul>
+        <li>Avaliar cada abordagem em termos de:
+          <ul>
+            <li>Desempenho computacional (tempo de execução, uso de memória, escalabilidade)</li>
+            <li>Suporte à diferenciação automática</li>
+            <li>Clareza estrutural, expansibilidade e manutenibilidade do código resultante</li>
+          </ul>
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Métodos</h2>
+      <ol>
+        <li>Estudo e consolidação teórica sobre programação lógico-probabilística, circuitos sd-DNNF e métodos de compilação para execução diferenciável.</li>
+        <li>Revisão e seleção de ferramentas existentes para geração de circuitos lógicos.</li>
+        <li>Implementação das abordagens de transformação para PyTorch (ou outros frameworks).</li>
+        <li>Desenvolvimento de casos de teste e benchmarks simbólicos.</li>
+        <li>Análise experimental dos métodos implementados, com métricas quantitativas e qualitativas.</li>
+        <li>Documentação e redação do trabalho, com reflexões críticas e sugestões para trabalhos futuros.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Planejamento das principais atividades (com cronograma estimado)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Período</th>
+            <th>Atividade</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Abril – Maio 2025</td>
+            <td>
+              Revisão bibliográfica sobre sd-DNNF, programação lógico-probabilística e compilação.<br>
+              Estudo das ferramentas de compilação e definição formal do escopo técnico.
+            </td>
+          </tr>
+          <tr>
+            <td>Junho – Agosto 2025</td>
+            <td>Implementação das múltiplas abordagens de compilação.</td>
+          </tr>
+          <tr>
+            <td>Setembro – Outubro 2025</td>
+            <td>
+              Desenvolvimento de benchmark e testes experimentais.<br>
+              Avaliação comparativa e documentação dos resultados.
+            </td>
+          </tr>
+          <tr>
+            <td>Novembro – Dezembro 2025</td>
+            <td>Redação, revisão final e entrega do TCC.</td>
+          </tr>
+        </tbody>
+      </table>
     </section>
 
     <section>
       <h2>Repositório</h2>
       <p>
         O código-fonte deste projeto está disponível no 
-        <a href="https://github.com/SEU_USUARIO/NOME_DO_REPOSITORIO" target="_blank">GitHub</a>.
+        <a href="https://github.com/mathjug/dPASP-Circuit-To-Network" target="_blank">GitHub</a>.
       </p>
     </section>
+
+    <section>
+      <h2>Bibliografia</h2>
+      <ul>
+        <li>Darwiche, A., & Marquis, P. (2002). <em>A Knowledge Compilation Map</em>. Journal of Artificial Intelligence Research.</li>
+        <li>Choi, Y., Kisa, D., & Van den Broeck, G. (2020). <em>Probabilistic Circuits: A Unifying Framework for Tractable Probabilistic Models</em>.</li>
+        <li>Darwiche, A. (2004). <em>New Advances in Compiling CNF to Decomposable Negation Normal Form</em>.</li>
+        <li>Liu, A., Ahmed, K., & Van den Broeck, G. (2022). <em>Scaling Tractable Probabilistic Circuits: A Systems Perspective</em>.</li>
+      </ul>
+    </section>
+
+
   </main>
 
   <footer>
-    <p>© 2025 Matheus Jurgensen - USP</p>
+    <p>© 2025 Matheus Jurgensen</p>
   </footer>
+
 </body>
 </html>
