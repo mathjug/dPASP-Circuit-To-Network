@@ -1,12 +1,17 @@
 import torch
 from torch import nn
-from src.entities.neural_network_nodes import LiteralNodeModule, ANDNode, ORNode
-import src.nnf2nn.nnf as nnf
+from src.nnf2nn.trivial_solutions.recursive.entities.and_node import ANDNode
+from src.nnf2nn.trivial_solutions.recursive.entities.or_node import ORNode
+from src.nnf2nn.trivial_solutions.recursive.entities.literal_node import LiteralNodeModule
+import src.nnf2nn.parser.nnf as nnf
 
-class NNFToNN(nn.Module):
+class RecursiveNN(nn.Module):
+    """
+    Neural Network representation of a NNF, with a top-down, recursive forward pass.
+    """
     def __init__(self, root, sym2lit: dict, n_vars: int):
         super().__init__()
-        self.model = self._build_network(root)
+        self.root = self._build_network(root)
         self.sym2lit = sym2lit
         self.n_vars = n_vars
     
@@ -21,7 +26,7 @@ class NNFToNN(nn.Module):
             return ORNode(children_modules)
     
     def forward(self, x):
-        return self.model(x)
+        return self.root.forward(x)
     
     def build_input(self):
         probs = torch.ones(self.n_vars)

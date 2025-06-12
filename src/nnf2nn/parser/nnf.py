@@ -1,3 +1,6 @@
+'''
+Parses a .nnf file to represent the NNF circuit in memory
+'''
 
 class Node():
     """ Abstract base node """
