@@ -1,8 +1,10 @@
 import torch
 from torch import nn
-from src.nnf2nn.trivial_solutions.iterative.entities.and_node import ANDNode
-from src.nnf2nn.trivial_solutions.iterative.entities.or_node import ORNode
-from src.nnf2nn.trivial_solutions.iterative.entities.literal_node import LiteralNodeModule
+
+from src.nnf2nn.trivial_solutions.entities.or_node import IterativeORNode as ORNode
+from src.nnf2nn.trivial_solutions.entities.and_node import IterativeANDNode as ANDNode
+from src.nnf2nn.trivial_solutions.entities.literal_node import LiteralNodeModule
+
 import src.nnf2nn.parser.nnf as nnf
 
 class IterativeNN(nn.Module):

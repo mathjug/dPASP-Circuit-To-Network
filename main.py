@@ -1,9 +1,11 @@
-from src.pasp2cnf.pasp2cnf import pasp2cnf
-import src.nnf2nn.parser.nnf as nnf
-from src.nnf2nn.trivial_solutions.recursive.neural_network import RecursiveNN
-from src.nnf2nn.trivial_solutions.iterative.neural_network import IterativeNN
-from src.cnf2nnf.cnf2nnf import cnf2nnf
 import torch
+
+from src.pasp2cnf.pasp2cnf import pasp2cnf
+from src.cnf2nnf.cnf2nnf import cnf2nnf
+import src.nnf2nn.parser.nnf as nnf
+
+from src.nnf2nn.trivial_solutions.iterative_neural_network import IterativeNN
+from src.nnf2nn.trivial_solutions.recursive_neural_network import RecursiveNN
 
 def small_example_recursive():
     ''' (x1 AND x2) OR (x3 OR x4) '''
