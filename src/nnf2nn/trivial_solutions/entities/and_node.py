@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 class RecursiveANDNode(nn.Module):
-    """Implements an AND gate using element-wise multiplication."""
+    """Implements an AND gate using element-wise multiplication with recursive forward pass."""
     def __init__(self, children_nodes):
         super().__init__()
         self.children_nodes = nn.ModuleList(children_nodes)
@@ -16,11 +16,11 @@ class RecursiveANDNode(nn.Module):
         return output[:-3] + ')'
 
     def forward(self, x):
-        child_outputs = torch.cat([child(x) for child in self.children_nodes], dim=1)
+        child_outputs = torch.cat([child.forward(x) for child in self.children_nodes], dim=1)
         return torch.prod(child_outputs, dim=1, keepdim=True)
 
 class IterativeANDNode(nn.Module):
-    """Implements an AND gate using element-wise multiplication."""
+    """Implements an AND gate using element-wise multiplication with iterative forward pass."""
     def __init__(self, children_nodes):
         super().__init__()
         self.children_nodes = nn.ModuleList(children_nodes)
