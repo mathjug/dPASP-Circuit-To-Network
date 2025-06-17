@@ -46,7 +46,6 @@ class IterativeNN(nn.Module):
         visit(self.root)
         return sorted_nodes
 
-
     def forward(self, x):
         """
         Executes the forward pass using the pre-computed execution order.
@@ -61,15 +60,14 @@ class IterativeNN(nn.Module):
 
         for node in self.execution_order:
             if isinstance(node, LiteralNodeModule):
-                output = node(x)
-            
-            elif isinstance(node, (ANDNode, ORNode)):
+                output = node.forward(x)
+            else:
                 # Retrieve the pre-computed outputs of all children
                 # Use node IDs as dictionary keys because nn.Module is not hashable
                 child_outputs_list = [node_outputs[id(child)] for child in node.children_nodes]
                 child_outputs_tensor = torch.cat(child_outputs_list, dim=1)
-                output = node(child_outputs_tensor)
-
+                output = node.forward(child_outputs_tensor)
+            
             node_outputs[id(node)] = output
             
         return node_outputs[id(self.root)]

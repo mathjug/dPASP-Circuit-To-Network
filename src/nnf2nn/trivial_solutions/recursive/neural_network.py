@@ -9,7 +9,7 @@ class RecursiveNN(nn.Module):
     """
     Neural Network representation of a NNF, with a top-down, recursive forward pass.
     """
-    def __init__(self, root, sym2lit: dict, n_vars: int):
+    def __init__(self, root, sym2lit: dict = None, n_vars: int = None):
         super().__init__()
         self.root = self._build_network(root)
         self.sym2lit = sym2lit

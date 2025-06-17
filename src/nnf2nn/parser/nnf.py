@@ -23,17 +23,33 @@ class AndNode(Node):
     def __init__(self, id, children):
         super().__init__(id, children)
 
-
 class OrNode(Node):
     """ OR node in a NNF """
     def __init__(self, id, children, conflictingVar = 0):
         super().__init__(id, children)
         self.conflictingVar = conflictingVar
  
-
 class LiteralNode(Node):
-     """ LITERAL node in a NNF """
-     def __init__(self, id, literal, negated = False):
+    """
+    Represents a literal node in a Negation Normal Form (NNF) graph.
+
+    A literal node is a leaf in the NNF graph and represents a Boolean variable
+    or its negation.
+    """
+    def __init__(self, id, literal, negated = False):
+        """
+        Initializes a LiteralNode instance.
+
+        Args:
+            id (str): The unique identifier for this node, represented as a string.
+            literal (int): An integer greater than 0 that identifies the input
+                         variable this node represents. For instance, a literal
+                         of 1 corresponds to the first input variable.
+            negated (bool, optional): A flag indicating whether the literal is
+                                    negated. Defaults to False, meaning the
+                                    literal is positive (e.g., x). If True,
+                                    the literal is negated (e.g., ¬x).
+        """
         super().__init__(id, [])
         self.literal = literal
         self.negated = negated

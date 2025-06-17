@@ -12,4 +12,5 @@ class LiteralNodeModule(nn.Module):
         return f"{'¬' if self.negated else ''}x{self.literal_index}"
     
     def forward(self, x):
-        return x[:, self.literal_index].unsqueeze(1) * (-1 if self.negated else 1)
+        val = x[:, self.literal_index].unsqueeze(1)
+        return 1 - val if self.negated else val
