@@ -1,11 +1,9 @@
 import torch
 
-from src.pasp2cnf.pasp2cnf import pasp2cnf
-from src.cnf2nnf.cnf2nnf import cnf2nnf
-import src.nnf2nn.parser.nnf as nnf
+import src.nnf_parser.nnf_parser as nnf
 
-from src.nnf2nn.trivial_solutions.iterative_neural_network import IterativeNN
-from src.nnf2nn.trivial_solutions.recursive_neural_network import RecursiveNN
+from src.trivial_solutions.iterative_neural_network import IterativeNN
+from src.trivial_solutions.recursive_neural_network import RecursiveNN
 
 def small_example_recursive():
     ''' (x1 AND x2) OR (x3 OR x4) '''
@@ -56,24 +54,6 @@ def create_small_nnf():
     or_node = nnf.OrNode("6", [x3, x4])
     root = nnf.OrNode("7", [and_node, or_node])
     return root
-
-def smoke_example_recursive():
-    # converting PASP to CNF
-    filename, sym2lit = pasp2cnf('examples/smoke.pasp')
-    
-    # converting CNF to NNF
-    # filename = cnf2nnf(filename, 'src/cnf2nnf/c2d_linux')
-    filename = 'examples/smoke.pasp.cnf.nnf'
-
-    # storing NNF in memory
-    rootId, _, nodeDict, n_vars = nnf.parse(filename)
-
-    # converting NNF to a neural network
-    nn_model = RecursiveNN(nodeDict[rootId], sym2lit, n_vars)
-    print(nn_model.root)
-
-    nn_input = nn_model.build_input()
-    print("\n", nn_input)
 
 def main():
     print("\n=================== recursive small example ===================\n")

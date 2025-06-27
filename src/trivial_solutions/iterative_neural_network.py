@@ -1,11 +1,13 @@
 import torch
 from torch import nn
 
-from src.nnf2nn.trivial_solutions.entities.or_node import IterativeORNode as ORNode
-from src.nnf2nn.trivial_solutions.entities.and_node import IterativeANDNode as ANDNode
-from src.nnf2nn.trivial_solutions.entities.literal_node import LiteralNodeModule
+from src.trivial_solutions.entities.or_node import IterativeORNode as ORNode
+from src.trivial_solutions.entities.and_node import IterativeANDNode as ANDNode
+from src.trivial_solutions.entities.literal_node import LiteralNodeModule
+from src.trivial_solutions.entities.true_node import TrueNode
+from src.trivial_solutions.entities.false_node import FalseNode
 
-import src.nnf2nn.parser.nnf as nnf
+import src.nnf_parser.nnf_parser as nnf
 
 class IterativeNN(nn.Module):
     """
@@ -19,6 +21,10 @@ class IterativeNN(nn.Module):
     def _build_network(self, node):
         if isinstance(node, nnf.LiteralNode):
             return LiteralNodeModule(node.literal - 1, node.negated)
+        elif isinstance(node, nnf.TrueNode):
+            return TrueNode()
+        elif isinstance(node, nnf.FalseNode):
+            return FalseNode()
         elif isinstance(node, nnf.AndNode):
             children_modules = [self._build_network(child) for child in node.children]
             return ANDNode(children_modules)
@@ -61,15 +67,14 @@ class IterativeNN(nn.Module):
         node_outputs = {}
 
         for node in self.execution_order:
-            if isinstance(node, LiteralNodeModule):
-                output = node.forward(x)
-            else:
+            if hasattr(node, 'children_nodes'):
                 # Retrieve the pre-computed outputs of all children
                 # Use node IDs as dictionary keys because nn.Module is not hashable
                 child_outputs_list = [node_outputs[id(child)] for child in node.children_nodes]
                 child_outputs_tensor = torch.cat(child_outputs_list, dim=1)
                 output = node.forward(child_outputs_tensor)
-            
+            else:
+                output = node.forward(x)
             node_outputs[id(node)] = output
             
         return node_outputs[id(self.root)]

@@ -1,9 +1,9 @@
 import torch
 import pytest
 
-from src.nnf2nn.trivial_solutions.iterative_neural_network import IterativeNN
-from src.nnf2nn.trivial_solutions.recursive_neural_network import RecursiveNN
-import src.nnf2nn.parser.nnf as nnf
+from src.trivial_solutions.iterative_neural_network import IterativeNN
+from src.trivial_solutions.recursive_neural_network import RecursiveNN
+import src.nnf_parser.nnf_parser as nnf
 
 def calculate_individual_gradients(root_node, input_tensor, executor_class):
     """
