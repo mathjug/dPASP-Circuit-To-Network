@@ -1,6 +1,6 @@
 import torch
 
-import src.nnf_parser.nnf_parser as nnf
+import src.parser.nnf_parser as nnf
 
 from src.trivial_solutions.iterative_neural_network import IterativeNN
 from src.trivial_solutions.recursive_neural_network import RecursiveNN

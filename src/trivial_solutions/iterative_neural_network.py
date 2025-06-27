@@ -7,7 +7,7 @@ from src.trivial_solutions.entities.literal_node import LiteralNodeModule
 from src.trivial_solutions.entities.true_node import TrueNode
 from src.trivial_solutions.entities.false_node import FalseNode
 
-import src.nnf_parser.nnf_parser as nnf
+import src.parser.nnf_parser as nnf
 
 class IterativeNN(nn.Module):
     """
