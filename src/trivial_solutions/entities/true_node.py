@@ -11,7 +11,7 @@ class TrueNode(nn.Module):
     def __str__(self):
         return 'TRUE'
 
-    def forward(self, x):
+    def forward(self, x, marginalized_variables = None):
         """
         Returns a tensor of ones with a shape of (batch_size, 1).
         
@@ -20,6 +20,4 @@ class TrueNode(nn.Module):
                               device, and dtype.
         """
         batch_size = x.shape[0]
-        # Ensure the output tensor is on the same device and has the same type
-        # as the input tensor to ensure compatibility (e.g., on GPU).
         return torch.ones((batch_size, 1), device=x.device, dtype=x.dtype)

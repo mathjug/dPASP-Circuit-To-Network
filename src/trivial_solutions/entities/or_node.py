@@ -15,8 +15,8 @@ class RecursiveORNode(nn.Module):
             output += f"{child} V "
         return output[:-3] + ')'
 
-    def forward(self, x):
-        child_outputs = torch.cat([child.forward(x) for child in self.children_nodes], dim=1)
+    def forward(self, x, marginalized_variables = None):
+        child_outputs = torch.cat([child.forward(x, marginalized_variables) for child in self.children_nodes], dim=1)
         return torch.sum(child_outputs, dim=1, keepdim=True)
 
 class IterativeORNode(nn.Module):

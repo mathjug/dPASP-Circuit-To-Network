@@ -5,34 +5,14 @@ import src.parser.nnf_parser as nnf
 from src.trivial_solutions.iterative_neural_network import IterativeNN
 from src.trivial_solutions.recursive_neural_network import RecursiveNN
 
-def small_example_recursive():
+def small_example(nn_implementation):
     ''' (x1 AND x2) OR (x3 OR x4) '''
 
     # create the NNF
     nnf_root = create_small_nnf()
 
     # converting the NNF to a neural network
-    nn_model = RecursiveNN(nnf_root, None, None)
-    print(nn_model)
-    print("\nFormula: " + str(nn_model.root))
-
-    # querying the neural network
-    test_input = torch.tensor([ [1, 0, 0, 0],
-                                [1, 1, 0, 0],
-                                [0, 0, 0, 1],
-                                [0, 0, 1, 0],
-                                [0, 1, 0, 0],])
-    output = nn_model(test_input)
-    print("\nNeural Network Output:\n", output)
-
-def small_example_iterative():
-    ''' (x1 AND x2) OR (x3 OR x4) '''
-
-    # create the NNF
-    nnf_root = create_small_nnf()
-
-    # converting the NNF to a neural network
-    nn_model = IterativeNN(nnf_root)
+    nn_model = nn_implementation(nnf_root)
     print(nn_model)
     print("\nFormula: " + str(nn_model.root))
 
@@ -57,9 +37,9 @@ def create_small_nnf():
 
 def main():
     print("\n=================== recursive small example ===================\n")
-    small_example_recursive()
+    small_example(RecursiveNN)
     print("\n=================== iterative small example ===================\n")
-    small_example_iterative()
+    small_example(IterativeNN)
     print()
 
 if __name__ == "__main__":

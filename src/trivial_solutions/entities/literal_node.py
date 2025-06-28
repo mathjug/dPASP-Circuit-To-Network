@@ -10,7 +10,14 @@ class LiteralNodeModule(nn.Module):
     
     def __str__(self):
         return f"{'¬' if self.negated else ''}x{self.literal_index}"
-    
-    def forward(self, x):
+
+    def forward(self, x, marginalized_variables = None):
         val = x[:, self.literal_index].unsqueeze(1)
+        if self._is_marginalized_variable(marginalized_variables):
+            return val
         return 1 - val if self.negated else val
+    
+    def _is_marginalized_variable(self, marginalized_variables):
+        return (marginalized_variables is not None and
+            0 <= self.literal_index < len(marginalized_variables) and
+            marginalized_variables[self.literal_index] == 1)

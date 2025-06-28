@@ -11,7 +11,7 @@ class FalseNode(nn.Module):
     def __str__(self):
         return 'FALSE'
 
-    def forward(self, x):
+    def forward(self, x, marginalized_variables = None):
         """
         Returns a tensor of zeros with a shape of (batch_size, 1).
 
