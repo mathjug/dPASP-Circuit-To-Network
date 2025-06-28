@@ -66,6 +66,13 @@ class ProbabilitiesParser:
         return num_atoms
     
     def _build_marginalized_variables(self, num_atoms):
+        """
+        Constructs a vector that indicates which variables are marginalized.
+
+        A variable is considered marginalized if it has not been assigned a
+        specific probability. This vector uses a 1 for marginalized variables
+        and a 0 otherwise.
+        """
         self.marginalized_variables = np.zeros(num_atoms)
         for variable_index in range(num_atoms):
             if variable_index + 1 not in self.variable_to_prob:
