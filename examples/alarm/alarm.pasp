@@ -1,0 +1,8 @@
+% ground probabilistic facts
+0.1::burglary.
+0.2::earthquake.
+0.7::hears_alarm(john).
+% ground rules
+alarm :- burglary.
+alarm :- earthquake.
+calls(john) :- alarm, hears_alarm(john).

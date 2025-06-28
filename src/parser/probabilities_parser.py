@@ -80,7 +80,7 @@ class ProbabilitiesParser:
     
     def _build_input_tensor(self, num_atoms):
         """Constructs the input tensor based on the extracted probabilities."""
-        self.input_tensor = torch.ones(num_atoms)        
+        self.input_tensor = torch.ones(num_atoms)
         for variable_number, probability in self.variable_to_prob.items():
             if 0 < variable_number <= num_atoms:
                 self.input_tensor[variable_number - 1] = probability
@@ -97,35 +97,3 @@ def load_json_file(file_path):
         print(f"Error: The file at {file_path} is not a valid JSON file.")
         return
     return data
-
-def main():
-    file_path = '/Users/mjurgensen/Desktop/Personal/TCC/PASDD/plp/programs/alarm/alarm.json'
-    
-    parser = ProbabilitiesParser(file_path)
-
-    if parser.input_tensor.size > 0:
-        print("--- Parsing Successful ---\n")
-        
-        print("1. Variable to Atom Mapping:")
-        for variable_number, atom in sorted(parser.variable_to_atom.items(), key=lambda item: int(item[0])):
-            print(f"  Variable Number {variable_number}: {atom}")
-            
-        print("\n2. Probabilities Found (Variable Number -> Probability):")
-        for variable_number, prob in sorted(parser.variable_to_prob.items()):
-            atom_name = parser.variable_to_atom.get(str(variable_number), "Unknown")
-            print(f"  {atom_name} ({variable_number}): {prob}")
-
-        print("\n3. Constructed Input Tensor:")
-        print(parser.input_tensor)
-        
-        print("\n--- Tensor Breakdown ---")
-        for i, prob in enumerate(parser.input_tensor):
-            variable_number = i + 1
-            atom_name = parser.variable_to_atom.get(str(variable_number), "Unknown")
-            if variable_number in parser.variable_to_prob:
-                print(f"  Index {i} (Variable {variable_number}: {atom_name}): {prob:.2f}")
-            else:
-                print(f"  Index {i} (Variable {variable_number}: {atom_name}): {prob:.2f} (Default value)")
-
-if __name__ == "__main__":
-    main()

@@ -12,6 +12,7 @@ class LiteralNodeModule(nn.Module):
         return f"{'¬' if self.negated else ''}x{self.literal_index}"
 
     def forward(self, x, marginalized_variables = None):
+        x = x.unsqueeze(0) if x.dim() == 1 else x
         val = x[:, self.literal_index].unsqueeze(1)
         if self._is_marginalized_variable(marginalized_variables):
             return val

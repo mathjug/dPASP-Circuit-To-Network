@@ -19,5 +19,5 @@ class FalseNode(nn.Module):
             x (torch.Tensor): The input tensor, used to determine batch size,
                               device, and dtype.
         """
-        batch_size = x.shape[0]
+        batch_size = 1 if x.dim() == 1 else x.shape[0]
         return torch.zeros((batch_size, 1), device=x.device, dtype=x.dtype)

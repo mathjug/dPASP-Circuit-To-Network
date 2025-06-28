@@ -149,15 +149,3 @@ def print_circuit(node, prefix="", is_last=True):
         is_child_last = (i == len(children) - 1)
         new_prefix = prefix + ("    " if is_last else "│   ")
         print_circuit(child, new_prefix, is_child_last)
-
-def main():
-    file_name = '/Users/mjurgensen/Desktop/Personal/TCC/PASDD/plp/programs/alarm/sdd/alarm_balanced.sdd'
-    if not os.path.exists(file_name):
-        print(f"Error: The file '{file_name}' was not found.")
-    else:
-        parser = NNFParser()
-        root_node = parser.parse(file_name)
-        print_circuit(root_node)
-
-if __name__ == '__main__':
-    main()

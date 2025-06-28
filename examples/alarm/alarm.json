@@ -1,0 +1,104 @@
+{
+    "atom_mapping": {
+        "1": "burglary",
+        "2": "earthquake",
+        "3": "hears_alarm(john)",
+        "4": "alarm",
+        "5": "calls(john)"
+    },
+    "rules": {
+        "normal": [
+            {
+                "head": 4,
+                "body": {
+                    "pos": [
+                        1
+                    ],
+                    "neg": []
+                },
+                "text": "alarm#4:-burglary#1."
+            },
+            {
+                "head": 4,
+                "body": {
+                    "pos": [
+                        2
+                    ],
+                    "neg": []
+                },
+                "text": "alarm#4:-earthquake#2."
+            },
+            {
+                "head": 5,
+                "body": {
+                    "pos": [
+                        4,
+                        3
+                    ],
+                    "neg": []
+                },
+                "text": "calls(john)#5:-alarm#4,hears_alarm(john)#3."
+            }
+        ],
+        "disjunctive": [],
+        "choice": []
+    },
+    "head_rules": {
+        "4": [
+            {
+                "pos_body": [
+                    1
+                ],
+                "neg_body": []
+            },
+            {
+                "pos_body": [
+                    2
+                ],
+                "neg_body": []
+            }
+        ],
+        "5": [
+            {
+                "pos_body": [
+                    4,
+                    3
+                ],
+                "neg_body": []
+            }
+        ]
+    },
+    "metadata": {
+        "num_atoms": 5,
+        "num_rules": 3,
+        "num_pfacts": 3,
+        "num_ads": 0,
+        "num_drules": 0,
+        "num_crules": 0
+    },
+    "prob": {
+        "pfacts": [
+            [
+                1,
+                0.1
+            ],
+            [
+                2,
+                0.2
+            ],
+            [
+                3,
+                0.7
+            ]
+        ],
+        "ads": [],
+        "pvars": [
+            1,
+            2,
+            3
+        ]
+    },
+    "exactly_one_constraints": [],
+    "loops": [],
+    "loop_formulas": []
+}
