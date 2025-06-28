@@ -1,6 +1,5 @@
 import pytest
 import json
-import os
 import torch
 
 from src.parser.probabilities_parser import ProbabilitiesParser

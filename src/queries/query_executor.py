@@ -1,5 +1,3 @@
-import torch
-
 from src.parser.nnf_parser import NNFParser
 from src.parser.probabilities_parser import ProbabilitiesParser
 

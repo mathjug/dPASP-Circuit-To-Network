@@ -1,4 +1,3 @@
-import torch
 from torch import nn
 
 from src.trivial_solutions.entities.or_node import RecursiveORNode as ORNode

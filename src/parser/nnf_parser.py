@@ -1,5 +1,3 @@
-import os
-
 class NNFParser:
     """
     A parser for reading NNF/SDD files and constructing a circuit graph in memory.

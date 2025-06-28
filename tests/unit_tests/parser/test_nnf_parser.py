@@ -1,6 +1,4 @@
-import torch
 import pytest
-
 from src.parser.nnf_parser import NNFParser, AndNode, OrNode, LiteralNode, TrueNode, FalseNode
 
 # ----------------------------------------------------------------------------

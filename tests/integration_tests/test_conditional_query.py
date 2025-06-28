@@ -1,5 +1,6 @@
 """
-This file contains integration tests for the QueryExecutor class.
+This file contains integration tests for computing conditional probabilities using
+the QueryExecutor class.
 
 Specifically, this test ensures the end-to-end pipeline is functional:
 1.  The `NNFParser` correctly parses a minimal `.sdd` file.
@@ -10,11 +11,7 @@ Specifically, this test ensures the end-to-end pipeline is functional:
 """
 
 import pytest
-import torch
 import json
-
-from src.trivial_solutions.iterative_neural_network import IterativeNN
-from src.trivial_solutions.recursive_neural_network import RecursiveNN
 from src.queries.query_executor import QueryExecutor
 from tests.utils.utils import implementations
 
@@ -55,9 +52,9 @@ def create_test_files(tmp_path):
     return str(sdd_file), str(json_file)
 
 @pytest.mark.parametrize("implementation", implementations, ids=[i['name'] for i in implementations])
-def test_integration_query_execution(implementation, create_test_files):
+def test_integration_conditional_query(implementation, create_test_files):
     """
-    Performs an integration test on the QueryExecutor.
+    Performs an integration test calling the QueryExecutor.
 
     This test uses the real neural network implementations and file parsers
     to verify the end-to-end query logic for the circuit (x1 AND x2).
