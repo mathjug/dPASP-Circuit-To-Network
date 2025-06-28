@@ -39,6 +39,9 @@ def test_successful_parsing(valid_json_file):
     expected_probs = {1: 0.1, 2: 0.2}
     assert parser.variable_to_prob == expected_probs
 
+    expected_marginalized = np.array([0, 0, 1])
+    np.testing.assert_array_almost_equal(parser.marginalized_variables, expected_marginalized)
+
     expected_tensor = np.array([0.1, 0.2, 1.0])
     np.testing.assert_array_almost_equal(parser.input_tensor, expected_tensor)
 
@@ -47,6 +50,7 @@ def test_file_not_found():
     parser = ProbabilitiesParser("non_existent_file.json")
     assert parser.variable_to_atom == {}
     assert parser.variable_to_prob == {}
+    assert parser.marginalized_variables.size == 0
     assert parser.input_tensor.size == 0
 
 def test_invalid_json(tmp_path):
@@ -58,6 +62,7 @@ def test_invalid_json(tmp_path):
     parser = ProbabilitiesParser(invalid_json_path)
     assert parser.variable_to_atom == {}
     assert parser.variable_to_prob == {}
+    assert parser.marginalized_variables.size == 0
     assert parser.input_tensor.size == 0
 
 def test_missing_prob_field(tmp_path):
@@ -70,6 +75,7 @@ def test_missing_prob_field(tmp_path):
     parser = ProbabilitiesParser(file_path)
     assert parser.variable_to_atom == {"1": "a", "2": "b"}
     assert parser.variable_to_prob == {}
+    np.testing.assert_array_almost_equal(parser.marginalized_variables, np.array([1, 1]))
     np.testing.assert_array_almost_equal(parser.input_tensor, np.array([1.0, 1.0]))
 
 def test_missing_atom_mapping(tmp_path):
@@ -82,3 +88,4 @@ def test_missing_atom_mapping(tmp_path):
     parser = ProbabilitiesParser(file_path)
     assert parser.variable_to_atom == {}
     assert parser.input_tensor.size == 0
+    assert parser.marginalized_variables.size == 0
