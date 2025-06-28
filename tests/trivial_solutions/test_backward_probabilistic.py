@@ -1,27 +1,24 @@
+"""
+This test file is dedicated to verifying the correctness of the backward pass
+for both RecursiveNN and IterativeNN implementations, using probabilistic inputs.
+It checks if the computed gradients of various circuits matches the analytically
+calculated expected gradients.
+
+Tests are divided into two main scenarios:
+1. Standard Forward Pass: Evaluates circuits with probabilistic inputs.
+2. Marginalized Forward Pass: Evaluates circuits where the behavior of negated
+   literals is altered for specific "marginalized" variables.
+"""
+
 import torch
 import pytest
 
-from src.trivial_solutions.iterative_neural_network import IterativeNN
-from src.trivial_solutions.recursive_neural_network import RecursiveNN
 import src.parser.nnf_parser as nnf
+from tests.utils.utils import calculate_individual_gradients, implementations
 
-from tests.utils.gradient_calculator import calculate_individual_gradients
+# --- Test Cases for Standard Backward Pass ---
+# Each tuple: (description, nnf_circuit, input_data, marginalized_variables, expected_gradients)
 
-# --- Test Cases Definition ---
-
-implementations = [
-    {
-        "name": "Recursive",
-        "implementation_class": RecursiveNN,
-    },
-    {
-        "name": "Iterative",
-        "implementation_class": IterativeNN,
-    }
-]
-
-# Each test case is defined as a tuple:
-# (description, nnf_circuit, input_data, marginalized_variables, expected_gradients)
 standard_test_cases = [
     (
         "Probabilistic AND: x₁ ∧ x₂",
@@ -115,6 +112,9 @@ standard_test_cases = [
     ),
 ]
 
+# --- Test Cases for Marginalized Backward Pass ---
+# Each tuple: (description, nnf_circuit, input_data, marginalized_variables, expected_gradients)
+
 marginalized_test_cases = [
     (
         "Simple Marginalized Negation: ¬x₁",
@@ -172,9 +172,8 @@ marginalized_test_cases = [
 test_cases = standard_test_cases + marginalized_test_cases
 
 @pytest.mark.parametrize("implementation", implementations, ids=[i['name'] for i in implementations])
-@pytest.mark.parametrize("description, nnf_circuit, input_data, marginalized_variables, expected_gradients", test_cases)
-def test_circuit_partial_derivatives_probabilistic(implementation, description, nnf_circuit, input_data, marginalized_variables,
-                                                    expected_gradients):
+@pytest.mark.parametrize("description, nnf_circuit, input_data, marginalized_vars, expected_gradients", test_cases)
+def test_circuit_derivatives_probabilistic(implementation, description, nnf_circuit, input_data, marginalized_vars, expected_gradients):
     """
     Tests that computed gradients match analytical derivatives for various circuits 
     and implementations using probabilistic inputs.
@@ -185,7 +184,7 @@ def test_circuit_partial_derivatives_probabilistic(implementation, description, 
     root_node = nnf_circuit()
 
     implementation_class = implementation["implementation_class"]
-    computed_gradients = calculate_individual_gradients(root_node, input_data.clone(), implementation_class, marginalized_variables)
+    computed_gradients = calculate_individual_gradients(root_node, input_data.clone(), implementation_class, marginalized_vars)
 
     torch.testing.assert_close(
         computed_gradients, 

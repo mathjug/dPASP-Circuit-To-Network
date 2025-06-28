@@ -1,0 +1,118 @@
+"""
+This test file is dedicated to verifying the correctness of the forward pass
+for both RecursiveNN and IterativeNN implementations using BOOLEAN inputs (0.0 or 1.0).
+It checks if the computed output of various complex circuits matches the
+analytically calculated expected output.
+
+Note that the OR operation is implemented as summation, so `1 V 1` will result
+in `2.0`, not `1.0`.
+
+Tests are divided into two main scenarios:
+1. Standard Forward Pass: Evaluates circuits with boolean inputs.
+2. Marginalized Forward Pass: Evaluates circuits where the behavior of negated
+   literals is altered for specific "marginalized" variables.
+"""
+
+import torch
+import pytest
+
+import src.parser.nnf_parser as nnf
+from tests.utils.utils import implementations
+
+# --- Test Cases for Standard Forward Pass ---
+# Each tuple: (description, nnf_circuit, input_data, marginalized_vars, expected_output)
+
+standard_test_cases = [
+    (
+        "Boolean Complex AND of ORs: (x₁ V ¬x₂) ∧ (¬x₃ V x₄)",
+        # Circuit function: f = (x₁ + (1 - x₂)) * ((1 - x₃) + x₄)
+        lambda: nnf.AndNode('A1', [
+            nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2, negated=True)]),
+            nnf.OrNode('O2', [nnf.LiteralNode('L3', 3, negated=True), nnf.LiteralNode('L4', 4)])
+        ]),
+        torch.tensor([
+            [1., 0., 1., 0.],  # (1 + (1-0)) * ((1-1) + 0) = 2 * 0 = 0
+            [1., 1., 0., 1.],  # (1 + (1-1)) * ((1-0) + 1) = 1 * 2 = 2
+            [0., 0., 0., 0.],  # (0 + (1-0)) * ((1-0) + 0) = 1 * 1 = 1
+            [1., 0., 0., 1.],  # (1 + (1-0)) * ((1-0) + 1) = 2 * 2 = 4
+        ]),
+        torch.tensor([0, 0, 0, 0]),
+        torch.tensor([[0.], [2.], [1.], [4.]])
+    ),
+    (
+        "Boolean OR of ANDs with True/False: (x₁ ∧ ¬x₂) V (x₃ ∧ True) V (x₄ ∧ False)",
+        # Circuit function: f = (x₁ * (1 - x₂)) + (x₃ * 1) + (x₄ * 0)
+        lambda: nnf.OrNode('O1', [
+            nnf.AndNode('A1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2, negated=True)]),
+            nnf.AndNode('A2', [nnf.LiteralNode('L3', 3), nnf.TrueNode('T')]),
+            nnf.AndNode('A3', [nnf.LiteralNode('L4', 4), nnf.FalseNode('F')])
+        ]),
+        torch.tensor([
+            [1., 0., 1., 1.], # (1 * 1) + (1 * 1) + (1 * 0) = 1 + 1 + 0 = 2
+            [1., 1., 0., 1.], # (1 * 0) + (0 * 1) + (1 * 0) = 0 + 0 + 0 = 0
+            [0., 0., 1., 0.], # (0 * 1) + (1 * 1) + (0 * 0) = 0 + 1 + 0 = 1
+        ]),
+        torch.tensor([0, 0, 0, 0]),
+        torch.tensor([[2.], [0.], [1.]])
+    ),
+]
+
+# --- Test Cases for Marginalized Forward Pass ---
+# Each tuple: (description, nnf_circuit, input_data, marginalized_vars, expected_output)
+
+marginalized_test_cases = [
+    (
+        "Boolean Complex AND of ORs with Marginalization: (x₁ V ¬x₂) ∧ (¬x₃ V x₄)",
+        # Marginalize x₂ and x₃. ¬x₂ -> x₂, ¬x₃ -> x₃
+        # Function: f = (x₁ + x₂) * (x₃ + x₄)
+        lambda: nnf.AndNode('A1', [
+            nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2, negated=True)]),
+            nnf.OrNode('O2', [nnf.LiteralNode('L3', 3, negated=True), nnf.LiteralNode('L4', 4)])
+        ]),
+        torch.tensor([
+            [1., 0., 1., 0.], # (1 + 0) * (1 + 0) = 1 * 1 = 1
+            [1., 1., 0., 1.], # (1 + 1) * (0 + 1) = 2 * 1 = 2
+        ]),
+        torch.tensor([0, 1, 1, 0]),
+        torch.tensor([[1.], [2.]])
+    ),
+    (
+        "Boolean OR of ANDs with Partial Marginalization: (x₁ ∧ ¬x₂) V (x₃ ∧ ¬x₄)",
+        # Marginalize only x₂. ¬x₂ -> x₂
+        # Function: f = (x₁ * x₂) + (x₃ * (1 - x₄))
+        lambda: nnf.OrNode('O1', [
+            nnf.AndNode('A1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2, negated=True)]),
+            nnf.AndNode('A2', [nnf.LiteralNode('L3', 3), nnf.LiteralNode('L4', 4, negated=True)]),
+        ]),
+        torch.tensor([
+            [1., 1., 1., 0.], # (1 * 1) + (1 * (1-0)) = 1 + 1 = 2
+            [1., 0., 1., 1.], # (1 * 0) + (1 * (1-1)) = 0 + 0 = 0
+            [1., 1., 1., 1.], # (1 * 1) + (1 * (1-1)) = 1 + 0 = 1
+        ]),
+        torch.tensor([0, 1, 0, 0]),
+        torch.tensor([[2.], [0.], [1.]])
+    )
+]
+
+test_cases = standard_test_cases + marginalized_test_cases
+
+@pytest.mark.parametrize("implementation", implementations, ids=[i['name'] for i in implementations])
+@pytest.mark.parametrize("description, nnf_circuit, input_data, marginalized_vars, expected_output", test_cases)
+def test_forward_pass_boolean_marginalized(implementation, description, nnf_circuit, input_data, marginalized_vars, expected_output):
+    """
+    Tests the forward pass output against analytical results using boolean inputs.
+    """
+    full_description = f"{description} ({implementation['name']} Implementation)"
+    print(f"Testing marginalized boolean forward pass: {full_description}")
+
+    root_node = nnf_circuit()
+    implementation_class = implementation["implementation_class"]
+    neural_network = implementation_class(root_node)
+
+    computed_output = neural_network.forward(input_data, marginalized_variables=marginalized_vars)
+
+    torch.testing.assert_close(
+        computed_output,
+        expected_output,
+        msg=f"Output mismatch for marginalized circuit: {full_description}\n Expected: {expected_output}\n Actual: {computed_output}\n"
+    )

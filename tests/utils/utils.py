@@ -1,4 +1,17 @@
 import torch
+from src.trivial_solutions.iterative_neural_network import IterativeNN
+from src.trivial_solutions.recursive_neural_network import RecursiveNN
+
+implementations = [
+    {
+        "name": "Recursive",
+        "implementation_class": RecursiveNN,
+    },
+    {
+        "name": "Iterative",
+        "implementation_class": IterativeNN,
+    }
+]
 
 def calculate_individual_gradients(root_node, input_tensor, executor_class, marginalized_variables = None):
     """

@@ -1,27 +1,24 @@
+"""
+This test file is dedicated to verifying the correctness of the backward pass
+for both RecursiveNN and IterativeNN implementations, using boolean inputs.
+It checks if the computed gradients of various circuits matches the analytically
+calculated expected gradients.
+
+Tests are divided into two main scenarios:
+1. Standard Forward Pass: Evaluates circuits with boolean inputs.
+2. Marginalized Forward Pass: Evaluates circuits where the behavior of negated
+   literals is altered for specific "marginalized" variables.
+"""
+
 import torch
 import pytest
 
-from src.trivial_solutions.iterative_neural_network import IterativeNN
-from src.trivial_solutions.recursive_neural_network import RecursiveNN
 import src.parser.nnf_parser as nnf
+from tests.utils.utils import calculate_individual_gradients, implementations
 
-from tests.utils.gradient_calculator import calculate_individual_gradients
+# --- Test Cases for Boolean Backward Pass ---
+# Each tuple: (description, nnf_circuit, input_data, expected_gradients)
 
-# --- Test Cases Definition ---
-
-implementations = [
-    {
-        "name": "Recursive",
-        "implementation_class": RecursiveNN,
-    },
-    {
-        "name": "Iterative",
-        "implementation_class": IterativeNN,
-    }
-]
-
-# Each test case is defined as a tuple:
-# (description, nnf_circuit, input_data, expected_gradients)
 test_cases = [
     (
         "Simple AND: x₁ ∧ x₂",
@@ -69,7 +66,7 @@ test_cases = [
 
 @pytest.mark.parametrize("implementation", implementations, ids=[i['name'] for i in implementations])
 @pytest.mark.parametrize("description, nnf_circuit, input_data, expected_gradients", test_cases)
-def test_circuit_partial_derivatives_boolean(implementation, description, nnf_circuit, input_data, expected_gradients):
+def test_circuit_derivatives_boolean(implementation, description, nnf_circuit, input_data, expected_gradients):
     """
     Tests that computed gradients match analytical derivatives for various circuits and implementations
     using boolean inputs.
