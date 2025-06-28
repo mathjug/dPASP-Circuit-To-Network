@@ -21,14 +21,15 @@ implementations = [
 ]
 
 # Each test case is defined as a tuple:
-# (description, nnf_circuit, input_data, expected_gradients)
-test_cases = [
+# (description, nnf_circuit, input_data, marginalized_variables, expected_gradients)
+standard_test_cases = [
     (
         "Probabilistic AND: x₁ ∧ x₂",
         # f = x₁ * x₂
         # ∂f/∂x₁ = x₂, ∂f/∂x₂ = x₁
         lambda: nnf.AndNode('A1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
         torch.tensor([[0.2, 0.7], [0.5, 0.5], [0.9, 0.1]]),
+        torch.tensor([0, 0]),
         torch.tensor([[0.7, 0.2], [0.5, 0.5], [0.1, 0.9]])
     ),
     (
@@ -37,6 +38,7 @@ test_cases = [
         # ∂f/∂x₁ = 1, ∂f/∂x₂ = 1
         lambda: nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
         torch.tensor([[0.1, 0.9], [0.8, 0.3]]),
+        torch.tensor([0, 0]),
         torch.tensor([[1.0, 1.0], [1.0, 1.0]])
     ),
     (
@@ -45,6 +47,7 @@ test_cases = [
         # ∂f/∂x₁ = -x₂, ∂f/∂x₂ = 1 - x₁
         lambda: nnf.AndNode('A1', [nnf.LiteralNode('L1', 1, negated=True), nnf.LiteralNode('L2', 2)]),
         torch.tensor([[0.3, 0.6], [0.8, 0.9]]),
+        torch.tensor([0, 0]),
         torch.tensor([[-0.6, 0.7], [-0.9, 0.2]])
     ),
     (
@@ -56,6 +59,7 @@ test_cases = [
             nnf.LiteralNode('L3', 3)
         ]),
         torch.tensor([[0.2, 0.8, 0.5], [0.9, 0.1, 0.3]]),
+        torch.tensor([0, 0, 0]),
         torch.tensor([[-0.8, 0.8, 1.0], [-0.1, 0.1, 1.0]])
     ),
     (
@@ -64,6 +68,7 @@ test_cases = [
         # ∂f/∂x₁ = 1
         lambda: nnf.AndNode('A1', [nnf.LiteralNode('L1', 1), nnf.TrueNode('T')]),
         torch.tensor([[0.25], [0.75]]),
+        torch.tensor([0, 0]),
         torch.tensor([[1.0], [1.0]])
     ),
     (
@@ -72,6 +77,7 @@ test_cases = [
         # ∂f/∂x₁ = 1
         lambda: nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.TrueNode('T')]),
         torch.tensor([[0.25], [0.75]]),
+        torch.tensor([0, 0]),
         torch.tensor([[1.0], [1.0]])
     ),
     (
@@ -80,6 +86,7 @@ test_cases = [
         # ∂f/∂x₁ = 0
         lambda: nnf.AndNode('A1', [nnf.LiteralNode('L1', 1), nnf.FalseNode('F')]),
         torch.tensor([[0.4], [0.6]]),
+        torch.tensor([0, 0]),
         torch.tensor([[0.0], [0.0]])
     ),
     (
@@ -88,6 +95,7 @@ test_cases = [
         # ∂f/∂x₁ = 1
         lambda: nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.FalseNode('F')]),
         torch.tensor([[0.4], [0.6]]),
+        torch.tensor([0, 0]),
         torch.tensor([[1.0], [1.0]])
     ),
     (
@@ -102,13 +110,71 @@ test_cases = [
             nnf.FalseNode('F')
         ]),
         torch.tensor([[0.5, 0.2, 0.9], [0.1, 0.8, 0.4]]),
+        torch.tensor([0, 0, 0]),
         torch.tensor([[0.8, -0.5, 1.0], [0.2, -0.1, 1.0]])
     ),
 ]
 
+marginalized_test_cases = [
+    (
+        "Simple Marginalized Negation: ¬x₁",
+        # x₁ is marginalized. f = x₁.
+        # ∂f/∂x₁ = 1
+        lambda: nnf.LiteralNode('L1', 1, negated=True),
+        torch.tensor([[0.3], [0.8]]),
+        torch.tensor([1]),
+        torch.tensor([[1.0], [1.0]])
+    ),
+    (
+        "AND with Marginalized Negation: ¬x₁ ∧ x₂",
+        # x₁ is marginalized. f = x₁ * x₂.
+        # ∂f/∂x₁ = x₂, ∂f/∂x₂ = x₁
+        lambda: nnf.AndNode('A1', [nnf.LiteralNode('L1', 1, negated=True), nnf.LiteralNode('L2', 2)]),
+        torch.tensor([[0.4, 0.5], [0.9, 0.2]]),
+        torch.tensor([1, 0]),
+        torch.tensor([[0.5, 0.4], [0.2, 0.9]])
+    ),
+    (
+        "OR with Marginalized Negation: x₁ V ¬x₂",
+        # x₂ is marginalized. f = x₁ + x₂.
+        # ∂f/∂x₁ = 1, ∂f/∂x₂ = 1
+        lambda: nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2, negated=True)]),
+        torch.tensor([[0.1, 0.6], [0.7, 0.3]]),
+        torch.tensor([0, 1]),
+        torch.tensor([[1.0, 1.0], [1.0, 1.0]])
+    ),
+    (
+        "Complex Marginalized: (¬x₁ ∧ x₂) V ¬x₃",
+        # x₁ and x₃ are marginalized. f = (x₁ * x₂) + x₃.
+        # ∂f/∂x₁ = x₂, ∂f/∂x₂ = x₁, ∂f/∂x₃ = 1
+        lambda: nnf.OrNode('O1', [
+            nnf.AndNode('A1', [nnf.LiteralNode('L1', 1, negated=True), nnf.LiteralNode('L2', 2)]),
+            nnf.LiteralNode('L3', 3, negated=True)
+        ]),
+        torch.tensor([[0.5, 0.8, 0.2], [0.1, 0.9, 0.7]]),
+        torch.tensor([1, 0, 1]),
+        torch.tensor([[0.8, 0.5, 1.0], [0.9, 0.1, 1.0]])
+    ),
+    (
+        "Mixed Negation: (¬x₁ ∧ x₂) V ¬x₃",
+        # Only x₁ is marginalized. f = (x₁ * x₂) + (1 - x₃).
+        # ∂f/∂x₁ = x₂, ∂f/∂x₂ = x₁, ∂f/∂x₃ = -1
+        lambda: nnf.OrNode('O1', [
+            nnf.AndNode('A1', [nnf.LiteralNode('L1', 1, negated=True), nnf.LiteralNode('L2', 2)]),
+            nnf.LiteralNode('L3', 3, negated=True)
+        ]),
+        torch.tensor([[0.5, 0.8, 0.2], [0.1, 0.9, 0.7]]),
+        torch.tensor([1, 0, 0]),
+        torch.tensor([[0.8, 0.5, -1.0], [0.9, 0.1, -1.0]])
+    )
+]
+
+test_cases = standard_test_cases + marginalized_test_cases
+
 @pytest.mark.parametrize("implementation", implementations, ids=[i['name'] for i in implementations])
-@pytest.mark.parametrize("description, nnf_circuit, input_data, expected_gradients", test_cases)
-def test_circuit_partial_derivatives_probabilistic(implementation, description, nnf_circuit, input_data, expected_gradients):
+@pytest.mark.parametrize("description, nnf_circuit, input_data, marginalized_variables, expected_gradients", test_cases)
+def test_circuit_partial_derivatives_probabilistic(implementation, description, nnf_circuit, input_data, marginalized_variables,
+                                                    expected_gradients):
     """
     Tests that computed gradients match analytical derivatives for various circuits 
     and implementations using probabilistic inputs.
@@ -119,7 +185,7 @@ def test_circuit_partial_derivatives_probabilistic(implementation, description, 
     root_node = nnf_circuit()
 
     implementation_class = implementation["implementation_class"]
-    computed_gradients = calculate_individual_gradients(root_node, input_data.clone(), implementation_class)
+    computed_gradients = calculate_individual_gradients(root_node, input_data.clone(), implementation_class, marginalized_variables)
 
     torch.testing.assert_close(
         computed_gradients, 

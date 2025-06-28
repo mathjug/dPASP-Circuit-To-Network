@@ -1,6 +1,6 @@
 import torch
 
-def calculate_individual_gradients(root_node, input_tensor, executor_class):
+def calculate_individual_gradients(root_node, input_tensor, executor_class, marginalized_variables = None):
     """
     Calculates the gradient of the output w.r.t each input for each sample in a batch.
     
@@ -9,7 +9,7 @@ def calculate_individual_gradients(root_node, input_tensor, executor_class):
     """
     input_tensor.requires_grad_(True)
     neural_network = executor_class(root_node)
-    output = neural_network.forward(input_tensor)
+    output = neural_network.forward(input_tensor, marginalized_variables)
     
     batch_size = input_tensor.shape[0]
     num_features = input_tensor.shape[1]

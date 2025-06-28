@@ -1,5 +1,5 @@
 import json
-import numpy as np
+import torch
 
 class ProbabilitiesParser:
     """
@@ -13,9 +13,9 @@ class ProbabilitiesParser:
                                  Populated after parsing.
         variable_to_prob (dict): A dictionary mapping variable numbers (int) to their probabilities (float).
                                  Populated after parsing.
-        marginalized_variables (np.ndarray): A NumPy array with 1 for marginalized variables and 0 otherwise.
-        input_tensor (np.ndarray): A NumPy array holding the input probabilities for each atom.
-                                   The index corresponds to (variable_number - 1). Populated after parsing.
+        marginalized_variables (torch.tensor): An array with 1 for marginalized variables and 0 otherwise.
+        input_tensor (torch.tensor): An array holding the input probabilities for each atom.
+                                     The index corresponds to (variable_number - 1). Populated after parsing.
     """
     def __init__(self, file_path):
         """
@@ -27,8 +27,8 @@ class ProbabilitiesParser:
         self.file_path = file_path
         self.variable_to_atom = {}
         self.variable_to_prob = {}
-        self.marginalized_variables = np.array([])  
-        self.input_tensor = np.array([])
+        self.marginalized_variables = torch.tensor([])  
+        self.input_tensor = torch.tensor([])
         self._parse()
 
     def _parse(self):
@@ -43,9 +43,9 @@ class ProbabilitiesParser:
           boolean circuit and values are the represented atoms (e.g., '1': 'hears_alarm(john)').
         - self.variable_to_prob: A dictionary mapping the integer variable number to their corresponding
           float probabilities (e.g., 1: 0.1).
-        - self.marginalized_variables: A NumPy array of integers, where 0 represents the non-marginalized
+        - self.marginalized_variables: An array of integers, where 0 represents the non-marginalized
           variables, 1 are the marginalized variables, and 2 is the variable whose probability will be queried
-        - self.input_tensor: A NumPy array of probabilities, ordered by variable number. The
+        - self.input_tensor: An array of probabilities, ordered by variable number. The
           size of the tensor is determined by 'num_atoms' in the metadata.
           The value at index `i` is the probability of atom `i+1`.
         """
@@ -73,14 +73,14 @@ class ProbabilitiesParser:
         specific probability. This vector uses a 1 for marginalized variables
         and a 0 otherwise.
         """
-        self.marginalized_variables = np.zeros(num_atoms)
+        self.marginalized_variables = torch.zeros(num_atoms, dtype=torch.int64)
         for variable_index in range(num_atoms):
             if variable_index + 1 not in self.variable_to_prob:
                 self.marginalized_variables[variable_index] = 1
     
     def _build_input_tensor(self, num_atoms):
         """Constructs the input tensor based on the extracted probabilities."""
-        self.input_tensor = np.ones(num_atoms)        
+        self.input_tensor = torch.ones(num_atoms)        
         for variable_number, probability in self.variable_to_prob.items():
             if 0 < variable_number <= num_atoms:
                 self.input_tensor[variable_number - 1] = probability
