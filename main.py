@@ -4,6 +4,7 @@ import src.parser.nnf_parser as nnf
 
 from src.trivial_solutions.iterative_neural_network import IterativeNN
 from src.trivial_solutions.recursive_neural_network import RecursiveNN
+from src.queries.query_executor import QueryExecutor
 
 def small_example(nn_implementation):
     ''' (x1 AND x2) OR (x3 OR x4) '''
@@ -35,12 +36,21 @@ def create_small_nnf():
     root = nnf.OrNode("7", [and_node, or_node])
     return root
 
+def alarm_example(nn_implementation):
+    sdd_file = "examples/alarm/alarm_balanced.sdd"
+    json_file = "examples/alarm/alarm.json"
+    query_executor = QueryExecutor(nn_implementation, sdd_file, json_file)
+    query_variable = 5
+    conditional_prob = query_executor.execute_query(query_variable)
+    print(f"\nP(calls(john) | evidence): {conditional_prob}\n")
+
 def main():
     print("\n=================== recursive small example ===================\n")
     small_example(RecursiveNN)
     print("\n=================== iterative small example ===================\n")
     small_example(IterativeNN)
-    print()
+    print("\n======================== alarm example ========================\n")
+    alarm_example(IterativeNN)
 
 if __name__ == "__main__":
     main()
