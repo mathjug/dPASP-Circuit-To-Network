@@ -1,3 +1,20 @@
+"""
+This module provides a parser for processing JSON files that describe the
+properties of a boolean circuit, specifically focusing on its probabilistic aspects.
+The primary component is the `ProbabilitiesParser` class, which extracts key
+information and transforms it into a format suitable for probabilistic inference
+or machine learning applications.
+
+The parser's main responsibilities include:
+- Mapping internal variable numbers to human-readable string representations,
+  referred to as 'atoms'.
+- Extracting the assigned probabilities for a subset of these variables.
+- Identifying variables that are "marginalized", meaning they have not been
+  assigned a specific probability in the input file.
+- Constructing a `torch.tensor` of input probabilities, which can be directly
+  used in computational frameworks that leverage tensor operations.
+"""
+
 import json
 import torch
 

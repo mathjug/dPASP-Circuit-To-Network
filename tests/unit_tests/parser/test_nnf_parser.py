@@ -123,6 +123,6 @@ def test_parse_negation(parser, create_test_file):
     assert root.negated is True
 
 def test_file_not_found(parser):
-    """Tests that the parser raises FileNotFoundError for a non-existent file."""
-    with pytest.raises(FileNotFoundError):
-        parser.parse("non_existent_file.sdd")
+    """Tests that the parser returns None for a non-existent file."""
+    root = parser.parse("non_existent_file.sdd")
+    assert root is None
