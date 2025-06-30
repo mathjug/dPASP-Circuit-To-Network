@@ -64,6 +64,45 @@ test_cases = [
     )
 ]
 
+# --- Test Cases for Boolean Backward Pass with Shared Subexpressions ---
+# Each tuple: (description, nnf_circuit, input_data, expected_gradients)
+
+shared_subexpression_test_cases = [
+    (
+        "Boolean Circuit with Shared OR: (x₁ V x₂) ∧ (x₁ V x₂)",
+        # f = (x₁ + x₂) * (x₁ + x₂) = (x₁ + x₂)²
+        # ∂f/∂x₁ = 2(x₁ + x₂), ∂f/∂x₂ = 2(x₁ + x₂)
+        lambda: nnf.AndNode('A1', [
+            nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
+            nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)])
+        ]),
+        torch.tensor([[0., 0.], [0., 1.], [1., 0.], [1., 1.]]),
+        torch.tensor([[0., 0.], [2., 2.], [2., 2.], [4., 4.]])
+    ),
+    (
+        "Boolean Circuit with Shared AND: ((x₁ ∧ x₂) V x₃) ∧ ((x₁ ∧ x₂) V x₄)",
+        # f = ((x₁ * x₂) + x₃) * ((x₁ * x₂) + x₄)
+        # ∂f/∂x₁ = x₂ * ((x₁ * x₂) + x₄) + x₂ * ((x₁ * x₂) + x₃)
+        # ∂f/∂x₂ = x₁ * ((x₁ * x₂) + x₄) + x₁ * ((x₁ * x₂) + x₃)
+        # ∂f/∂x₃ = (x₁ * x₂) + x₄
+        # ∂f/∂x₄ = (x₁ * x₂) + x₃
+        lambda: nnf.AndNode('A1', [
+            nnf.OrNode('O1', [
+                nnf.AndNode('A2', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
+                nnf.LiteralNode('L3', 3)
+            ]),
+            nnf.OrNode('O2', [
+                nnf.AndNode('A2', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
+                nnf.LiteralNode('L6', 4)
+            ])
+        ]),
+        torch.tensor([[1., 1., 0., 0.], [1., 0., 1., 1.], [0., 1., 1., 1.], [1., 1., 1., 1.], [0., 0., 0., 0.], [1., 0., 0., 1.]]),
+        torch.tensor([[2., 2., 1., 1.], [0., 2., 1., 1.], [2., 0., 1., 1.], [4., 4., 2., 2.], [0., 0., 0., 0.], [0., 1., 1., 0.]])
+    )
+]
+
+test_cases = test_cases + shared_subexpression_test_cases
+
 @pytest.mark.parametrize("implementation", implementations, ids=[i['name'] for i in implementations])
 @pytest.mark.parametrize("description, nnf_circuit, input_data, expected_gradients", test_cases)
 def test_circuit_derivatives_boolean(implementation, description, nnf_circuit, input_data, expected_gradients):

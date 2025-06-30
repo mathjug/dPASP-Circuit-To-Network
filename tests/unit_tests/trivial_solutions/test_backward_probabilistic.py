@@ -169,7 +169,60 @@ marginalized_test_cases = [
     )
 ]
 
-test_cases = standard_test_cases + marginalized_test_cases
+# --- Test Cases for Probabilistic Backward Pass with Shared Subexpressions ---
+# Each tuple: (description, nnf_circuit, input_data, marginalized_variables, expected_gradients)
+
+shared_subexpression_test_cases = [
+    (
+        "Probabilistic Circuit with Shared OR: (x₁ V x₂) ∧ (x₁ V x₂)",
+        # f = (x₁ + x₂) * (x₁ + x₂) = (x₁ + x₂)²
+        # ∂f/∂x₁ = 2(x₁ + x₂), ∂f/∂x₂ = 2(x₁ + x₂)
+        lambda: nnf.AndNode('A1', [
+            nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
+            nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)])
+        ]),
+        torch.tensor([[0.3, 0.7], [0.5, 0.5], [0.8, 0.2]]),
+        torch.tensor([0, 0]),
+        torch.tensor([[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]])
+    ),
+    (
+        "Probabilistic Circuit with Shared AND: ((x₁ ∧ x₂) V x₃) ∧ ((x₁ ∧ x₂) V x₄)",
+        # f = ((x₁ * x₂) + x₃) * ((x₁ * x₂) + x₄)
+        # ∂f/∂x₁ = x₂ * ((x₁ * x₂) + x₄) + x₂ * ((x₁ * x₂) + x₃)
+        # ∂f/∂x₂ = x₁ * ((x₁ * x₂) + x₄) + x₁ * ((x₁ * x₂) + x₃)
+        # ∂f/∂x₃ = (x₁ * x₂) + x₄
+        # ∂f/∂x₄ = (x₁ * x₂) + x₃
+        lambda: nnf.AndNode('A1', [
+            nnf.OrNode('O1', [
+                nnf.AndNode('A2', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
+                nnf.LiteralNode('L3', 3)
+            ]),
+            nnf.OrNode('O2', [
+                nnf.AndNode('A2', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
+                nnf.LiteralNode('L6', 4)
+            ])
+        ]),
+        torch.tensor([[0.6, 0.4, 0.3, 0.7], [0.2, 0.8, 0.5, 0.5], [0.9, 0.1, 0.4, 0.6], [0.3, 0.7, 0.2, 0.8]]),
+        torch.tensor([0, 0, 0, 0]),
+        torch.tensor([[0.592, 0.888, 0.94, 0.54], [1.056, 0.264, 0.66, 0.66], [0.118, 1.062, 0.69, 0.49], [0.994, 0.426, 1.01, 0.41]])
+    ),
+    (
+        "Probabilistic Circuit with Shared Negation: (¬x₁ ∧ x₂) V (¬x₁ ∧ x₃)",
+        # f = ((1 - x₁) * x₂) + ((1 - x₁) * x₃) = (1 - x₁) * (x₂ + x₃)
+        # ∂f/∂x₁ = -x₂ - x₃
+        # ∂f/∂x₂ = 1 - x₁
+        # ∂f/∂x₃ = 1 - x₁
+        lambda: nnf.OrNode('O1', [
+            nnf.AndNode('A1', [nnf.LiteralNode('L1', 1, negated=True), nnf.LiteralNode('L2', 2)]),
+            nnf.AndNode('A2', [nnf.LiteralNode('L1', 1, negated=True), nnf.LiteralNode('L4', 3)])
+        ]),
+        torch.tensor([[0.4, 0.6, 0.8], [0.7, 0.3, 0.5]]),
+        torch.tensor([0, 0, 0]),
+        torch.tensor([[-1.4, 0.6, 0.6], [-0.8, 0.3, 0.3]])
+    )
+]
+
+test_cases = standard_test_cases + marginalized_test_cases + shared_subexpression_test_cases
 
 @pytest.mark.parametrize("implementation", implementations, ids=[i['name'] for i in implementations])
 @pytest.mark.parametrize("description, nnf_circuit, input_data, marginalized_vars, expected_gradients", test_cases)
