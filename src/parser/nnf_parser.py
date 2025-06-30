@@ -29,10 +29,14 @@ class NNFParser:
         circuit_root (Optional[Node]): The final node processed in the file, which
             represents the root of the entire logical circuit. It is `None` until
             at least one node has been successfully parsed.
+        and_node_cache (Dict[Tuple[str, str], AndNode]): A dictionary that maps
+            a tuple of two node IDs to its corresponding AndNode object. This
+            serves as a cache for all AndNodes created during parsing.
 
     """
     def __init__(self):
         self.nodes = {} # maps node ID to node object
+        self.and_node_cache = {}
         self.circuit_root = None
     
     def parse(self, file_path):
@@ -140,6 +144,45 @@ class NNFParser:
         node = OrNode(id=or_node_id, children=and_children)
         self.nodes[or_node_id] = node
         return node
+    
+    def _create_decomposition_node(self, parts):
+        """
+        Creates a decomposition (Or) node from parsed parts, reusing AndNodes
+        to avoid duplication.
+        """
+        # D id-of-decomposition-sdd-node id-of-vtree number-of-elements {id-of-prime id-of-sub}*
+        or_node_id = parts[1]
+        num_elements = int(parts[3])
+        elements = parts[4:]
+        
+        and_children = []
+        for i in range(num_elements):
+            prime_id, sub_id = elements[i*2], elements[i*2+1]
+            and_node = self._create_and_node(prime_id, sub_id)
+            and_children.append(and_node)
+        
+        node = OrNode(id=or_node_id, children=and_children)
+        self.nodes[or_node_id] = node
+        return node
+
+    def _create_and_node(self, prime_id, sub_id):
+        """Creates or retrieves an already existing AndNode."""
+        and_node_key = (prime_id, sub_id)
+        if and_node_key in self.and_node_cache:
+            return self.and_node_cache[and_node_key]
+        return self._create_new_and_node(prime_id, sub_id)
+    
+    def _create_new_and_node(self, prime_id, sub_id):
+        """Creates a new AndNode."""
+        prime_node = self.nodes[prime_id]
+        sub_node = self.nodes[sub_id]
+        and_node_id = f"and_{prime_id}_{sub_id}"
+        
+        and_node = AndNode(id=and_node_id, children=[prime_node, sub_node])
+        self.and_node_cache[(prime_id, sub_id)] = and_node
+        self.nodes[and_node_id] = and_node
+
+        return and_node
 
 class Node:
     """
