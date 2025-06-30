@@ -1,20 +1,28 @@
 import torch
 from torch import nn
 
-class RecursiveANDNode(nn.Module):
-    """Implements an AND gate using element-wise multiplication with recursive forward pass and memoization."""
+class BaseANDNode(nn.Module):
+    """
+    Base class for AND nodes.
+    
+    Attributes:
+        children_nodes (list): List of child nodes
+        node_id (string): ID of the node
+    """
     def __init__(self, children_nodes, node_id=None):
         super().__init__()
         self.children_nodes = nn.ModuleList(children_nodes)
         self.node_id = node_id
-
+    
     def __str__(self):
-        if len(self.children_nodes) == 0:
-            return '()'
-        output = '('
-        for child in self.children_nodes:
-            output += f"{child} ∧ "
-        return output[:-3] + ')'
+        if not self.children_nodes: return '()'
+        return f"({' ∧ '.join(map(str, self.children_nodes))})"
+
+class RecursiveANDNode(BaseANDNode):
+    """Implements an AND gate using element-wise multiplication with recursive forward pass and memoization."""
+
+    def __init__(self, children_nodes, node_id=None):
+        super().__init__(children_nodes, node_id)
 
     def forward(self, x, marginalized_variables = None, memoization_cache = None):
         """
@@ -45,16 +53,20 @@ class RecursiveANDNode(nn.Module):
         
         return output
 
-class IterativeANDNode(nn.Module):
+class IterativeANDNode(BaseANDNode):
     """Implements an AND gate using element-wise multiplication with iterative forward pass."""
-    def __init__(self, children_nodes, node_id=None):
-        super().__init__()
-        self.children_nodes = nn.ModuleList(children_nodes)
-        self.node_id = node_id
 
-    def __str__(self):
-        if not self.children_nodes: return '()'
-        return f"({' ∧ '.join(map(str, self.children_nodes))})"
+    def __init__(self, children_nodes, node_id=None):
+        super().__init__(children_nodes, node_id)
 
     def forward(self, child_outputs):
+        """
+        Forward pass with iterative forward pass.
+        
+        Args:
+            child_outputs: Output tensor from child nodes
+            
+        Returns:
+            Output tensor
+        """
         return torch.prod(child_outputs, dim=1, keepdim=True)
