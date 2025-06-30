@@ -3,11 +3,7 @@ from torch import nn
 
 from src.trivial_solutions.entities.or_node import IterativeORNode as ORNode
 from src.trivial_solutions.entities.and_node import IterativeANDNode as ANDNode
-from src.trivial_solutions.entities.literal_node import LiteralNodeModule
-from src.trivial_solutions.entities.true_node import TrueNode
-from src.trivial_solutions.entities.false_node import FalseNode
-
-import src.parser.nnf_parser as nnf
+from src.trivial_solutions.network_builder import NetworkBuilder
 
 class IterativeNN(nn.Module):
     """
@@ -15,22 +11,9 @@ class IterativeNN(nn.Module):
     """
     def __init__(self, nnf_root):
         super().__init__()
-        self.root = self._build_network(nnf_root)
+        network_builder = NetworkBuilder(ORNode, ANDNode)
+        self.root = network_builder.build_network(nnf_root)
         self.execution_order = self._topological_sort()
-
-    def _build_network(self, node):
-        if isinstance(node, nnf.LiteralNode):
-            return LiteralNodeModule(node.literal - 1, node.negated)
-        elif isinstance(node, nnf.TrueNode):
-            return TrueNode()
-        elif isinstance(node, nnf.FalseNode):
-            return FalseNode()
-        elif isinstance(node, nnf.AndNode):
-            children_modules = [self._build_network(child) for child in node.children]
-            return ANDNode(children_modules)
-        elif isinstance(node, nnf.OrNode):
-            children_modules = [self._build_network(child) for child in node.children]
-            return ORNode(children_modules)
 
     def _topological_sort(self):
         """
