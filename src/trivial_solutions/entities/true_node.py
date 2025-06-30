@@ -11,7 +11,7 @@ class TrueNode(nn.Module):
     def __str__(self):
         return 'TRUE'
 
-    def forward(self, x, marginalized_variables = None):
+    def forward(self, x, marginalized_variables = None, memoization_cache = None):
         """
         Returns a tensor of ones with a shape of (batch_size, 1).
         

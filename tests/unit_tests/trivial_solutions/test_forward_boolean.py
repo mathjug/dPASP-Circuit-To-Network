@@ -94,7 +94,67 @@ marginalized_test_cases = [
     )
 ]
 
-test_cases = standard_test_cases + marginalized_test_cases
+# --- Test Cases for Memoization Cache Verification ---
+# Each tuple: (description, nnf_circuit, input_data, marginalized_vars, expected_output)
+
+memoization_test_cases = [
+    (
+        "Boolean Circuit with Shared Subexpressions: (x₁ V x₂) ∧ (x₁ V x₂)",
+        lambda: nnf.AndNode('A1', [
+            nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
+            nnf.OrNode('O2', [nnf.LiteralNode('L3', 1), nnf.LiteralNode('L4', 2)])
+        ]),
+        torch.tensor([
+            [1., 0.],  # (1 + 0) * (1 + 0) = 1 * 1 = 1
+            [1., 1.],  # (1 + 1) * (1 + 1) = 2 * 2 = 4
+            [0., 0.],  # (0 + 0) * (0 + 0) = 0 * 0 = 0
+        ]),
+        torch.tensor([0, 0]),
+        torch.tensor([[1.], [4.], [0.]])
+    ),
+    (
+        "Boolean Complex Circuit with Multiple Shared Nodes: ((x₁ V x₂) ∧ x₃) V ((x₁ V x₂) ∧ x₄)",
+        lambda: nnf.OrNode('O1', [
+            nnf.AndNode('A1', [
+                nnf.OrNode('O2', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
+                nnf.LiteralNode('L3', 3)
+            ]),
+            nnf.AndNode('A2', [
+                nnf.OrNode('O3', [nnf.LiteralNode('L4', 1), nnf.LiteralNode('L5', 2)]),
+                nnf.LiteralNode('L6', 4)
+            ])
+        ]),
+        torch.tensor([
+            [1., 0., 1., 1.],  # ((1+0)*1) + ((1+0)*1) = 1 + 1 = 2
+            [1., 1., 0., 0.],  # ((1+1)*0) + ((1+1)*0) = 0 + 0 = 0
+            [0., 0., 1., 1.],  # ((0+0)*1) + ((0+0)*1) = 0 + 0 = 0
+        ]),
+        torch.tensor([0, 0, 0, 0]),
+        torch.tensor([[2.], [0.], [0.]])
+    ),
+    (
+        "Boolean Deep Circuit with Shared Paths: ((x₁ ∧ x₂) V x₃) ∧ ((x₁ ∧ x₂) V x₄)",
+        lambda: nnf.AndNode('A1', [
+            nnf.OrNode('O1', [
+                nnf.AndNode('A2', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
+                nnf.LiteralNode('L3', 3)
+            ]),
+            nnf.OrNode('O2', [
+                nnf.AndNode('A3', [nnf.LiteralNode('L4', 1), nnf.LiteralNode('L5', 2)]),
+                nnf.LiteralNode('L6', 4)
+            ])
+        ]),
+        torch.tensor([
+            [1., 1., 0., 0.],  # ((1*1)+0) * ((1*1)+0) = 1 * 1 = 1
+            [1., 0., 1., 1.],  # ((1*0)+1) * ((1*0)+1) = 1 * 1 = 1
+            [0., 1., 1., 1.],  # ((0*1)+1) * ((0*1)+1) = 1 * 1 = 1
+        ]),
+        torch.tensor([0, 0, 0, 0]),
+        torch.tensor([[1.], [1.], [1.]])
+    )
+]
+
+test_cases = standard_test_cases + marginalized_test_cases + memoization_test_cases
 
 @pytest.mark.parametrize("implementation", implementations, ids=[i['name'] for i in implementations])
 @pytest.mark.parametrize("description, nnf_circuit, input_data, marginalized_vars, expected_output", test_cases)

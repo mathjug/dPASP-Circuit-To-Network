@@ -14,4 +14,5 @@ class RecursiveNN(nn.Module):
         self.root = network_builder.build_network(root)
 
     def forward(self, x, marginalized_variables = None):
-        return self.root.forward(x, marginalized_variables)
+        memoization_cache = {}
+        return self.root.forward(x, marginalized_variables, memoization_cache)

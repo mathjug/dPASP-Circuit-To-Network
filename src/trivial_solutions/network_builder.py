@@ -39,19 +39,19 @@ class NetworkBuilder:
             return node_cache[node.id]
         
         if isinstance(node, nnf.LiteralNode):
-            module = LiteralNodeModule(node.literal - 1, node.negated)
+            nn_node = LiteralNodeModule(node.literal - 1, node.negated)
         elif isinstance(node, nnf.TrueNode):
-            module = TrueNode()
+            nn_node = TrueNode()
         elif isinstance(node, nnf.FalseNode):
-            module = FalseNode()
+            nn_node = FalseNode()
         elif isinstance(node, nnf.AndNode):
-            children_modules = [self.build_network(child, node_cache) for child in node.children]
-            module = self.and_node_class(children_modules)
+            children_nodes = [self.build_network(child, node_cache) for child in node.children]
+            nn_node = self.and_node_class(children_nodes, node_id=node.id)
         elif isinstance(node, nnf.OrNode):
-            children_modules = [self.build_network(child, node_cache) for child in node.children]
-            module = self.or_node_class(children_modules)
+            children_nodes = [self.build_network(child, node_cache) for child in node.children]
+            nn_node = self.or_node_class(children_nodes, node_id=node.id)
         else:
             raise ValueError(f"Unknown node type: {type(node)}")
         
-        node_cache[node.id] = module
-        return module
+        node_cache[node.id] = nn_node
+        return nn_node
