@@ -118,55 +118,75 @@ standard_test_cases = [
 marginalized_test_cases = [
     (
         "Simple Marginalized Negation: ¬x₁",
-        # x₁ is marginalized. f = x₁.
-        # ∂f/∂x₁ = 1
+        # x₁ is marginalized. f = 1 (since ¬x₁ returns 1 when marginalized).
+        # ∂f/∂x₁ = 0 (no dependency on x₁)
         lambda: nnf.LiteralNode('L1', 1, negated=True),
         torch.tensor([[0.3], [0.8]]),
         torch.tensor([1]),
-        torch.tensor([[1.0], [1.0]])
+        torch.tensor([[0.0], [0.0]])
     ),
     (
         "AND with Marginalized Negation: ¬x₁ ∧ x₂",
-        # x₁ is marginalized. f = x₁ * x₂.
-        # ∂f/∂x₁ = x₂, ∂f/∂x₂ = x₁
+        # x₁ is marginalized. f = 1 * x₂ = x₂ (since ¬x₁ returns 1 when marginalized).
+        # ∂f/∂x₁ = 0, ∂f/∂x₂ = 1
         lambda: nnf.AndNode('A1', [nnf.LiteralNode('L1', 1, negated=True), nnf.LiteralNode('L2', 2)]),
         torch.tensor([[0.4, 0.5], [0.9, 0.2]]),
         torch.tensor([1, 0]),
-        torch.tensor([[0.5, 0.4], [0.2, 0.9]])
+        torch.tensor([[0.0, 1.0], [0.0, 1.0]])
     ),
     (
         "OR with Marginalized Negation: x₁ V ¬x₂",
-        # x₂ is marginalized. f = x₁ + x₂.
-        # ∂f/∂x₁ = 1, ∂f/∂x₂ = 1
+        # x₂ is marginalized. f = x₁ + 1 (since ¬x₂ returns 1 when marginalized).
+        # ∂f/∂x₁ = 1, ∂f/∂x₂ = 0
         lambda: nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2, negated=True)]),
         torch.tensor([[0.1, 0.6], [0.7, 0.3]]),
         torch.tensor([0, 1]),
-        torch.tensor([[1.0, 1.0], [1.0, 1.0]])
+        torch.tensor([[1.0, 0.0], [1.0, 0.0]])
     ),
     (
         "Complex Marginalized: (¬x₁ ∧ x₂) V ¬x₃",
-        # x₁ and x₃ are marginalized. f = (x₁ * x₂) + x₃.
-        # ∂f/∂x₁ = x₂, ∂f/∂x₂ = x₁, ∂f/∂x₃ = 1
+        # x₁ and x₃ are marginalized. f = (1 * x₂) + 1 = x₂ + 1.
+        # ∂f/∂x₁ = 0, ∂f/∂x₂ = 1, ∂f/∂x₃ = 0
         lambda: nnf.OrNode('O1', [
             nnf.AndNode('A1', [nnf.LiteralNode('L1', 1, negated=True), nnf.LiteralNode('L2', 2)]),
             nnf.LiteralNode('L3', 3, negated=True)
         ]),
         torch.tensor([[0.5, 0.8, 0.2], [0.1, 0.9, 0.7]]),
         torch.tensor([1, 0, 1]),
-        torch.tensor([[0.8, 0.5, 1.0], [0.9, 0.1, 1.0]])
+        torch.tensor([[0.0, 1.0, 0.0], [0.0, 1.0, 0.0]])
     ),
     (
         "Mixed Negation: (¬x₁ ∧ x₂) V ¬x₃",
-        # Only x₁ is marginalized. f = (x₁ * x₂) + (1 - x₃).
-        # ∂f/∂x₁ = x₂, ∂f/∂x₂ = x₁, ∂f/∂x₃ = -1
+        # Only x₁ is marginalized. f = (1 * x₂) + (1 - x₃) = x₂ + (1 - x₃).
+        # ∂f/∂x₁ = 0, ∂f/∂x₂ = 1, ∂f/∂x₃ = -1
         lambda: nnf.OrNode('O1', [
             nnf.AndNode('A1', [nnf.LiteralNode('L1', 1, negated=True), nnf.LiteralNode('L2', 2)]),
             nnf.LiteralNode('L3', 3, negated=True)
         ]),
         torch.tensor([[0.5, 0.8, 0.2], [0.1, 0.9, 0.7]]),
         torch.tensor([1, 0, 0]),
-        torch.tensor([[0.8, 0.5, -1.0], [0.9, 0.1, -1.0]])
-    )
+        torch.tensor([[0.0, 1.0, -1.0], [0.0, 1.0, -1.0]])
+    ),
+    (
+        "Marginalized Sum of Products: x₁x₂ + x₂x₃, marginalize x₃",
+        # x₃ is marginalized. f = x₁*x₂ + x₂*1 = x₁*x₂ + x₂
+        # ∂f/∂x₁ = x₂, ∂f/∂x₂ = x₁ + 1, ∂f/∂x₃ = 0
+        lambda: nnf.OrNode('O1', [
+            nnf.AndNode('A1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
+            nnf.AndNode('A2', [nnf.LiteralNode('L3', 2), nnf.LiteralNode('L4', 3)])
+        ]),
+        torch.tensor([
+            [0.1, 0.2, 0.3],
+            [0.5, 0.6, 0.7],
+            [0.9, 0.8, 0.1]
+        ]),
+        torch.tensor([0, 0, 1]),
+        torch.tensor([
+            [0.2, 0.1 + 1, 0.0],
+            [0.6, 0.5 + 1, 0.0],
+            [0.8, 0.9 + 1, 0.0]
+        ])
+    ),
 ]
 
 # --- Test Cases for Probabilistic Backward Pass with Shared Subexpressions ---

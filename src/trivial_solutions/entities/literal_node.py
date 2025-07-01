@@ -14,7 +14,8 @@ class LiteralNodeModule(nn.Module):
         x = x.unsqueeze(0) if x.dim() == 1 else x
         val = x[:, self.literal_index].unsqueeze(1)
         if self._is_marginalized_variable(marginalized_variables):
-            return val
+            # Use val * 0 + 1 to maintain gradient connectivity
+            return val * 0 + 1
         return 1 - val if self.negated else val
     
     def _is_marginalized_variable(self, marginalized_variables):

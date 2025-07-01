@@ -75,33 +75,33 @@ standard_test_cases = [
 marginalized_test_cases = [
     (
         "Complex AND of ORs with Marginalization: (x₁ V ¬x₂) ∧ (¬x₃ V x₄)",
-        # Marginalize x₂ and x₃. ¬x₂ -> p(x₂), ¬x₃ -> p(x₃)
-        # Function: f = (p(x₁) + p(x₂)) * (p(x₃) + p(x₄))
+        # Marginalize x₂ and x₃. ¬x₂ -> 1, ¬x₃ -> 1
+        # Function: f = (p(x₁) + 1) * (1 + p(x₄))
         lambda: nnf.AndNode('A1', [
             nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2, negated=True)]),
             nnf.OrNode('O2', [nnf.LiteralNode('L3', 3, negated=True), nnf.LiteralNode('L4', 4)])
         ]),
         torch.tensor([
-            [0.2, 0.8, 0.1, 0.9], # (0.2 + 0.8) * (0.1 + 0.9) = 1.0 * 1.0 = 1.0
-            [0.5, 0.5, 0.5, 0.5], # (0.5 + 0.5) * (0.5 + 0.5) = 1.0 * 1.0 = 1.0
+            [0.2, 0.8, 0.1, 0.9], # (0.2 + 1) * (1 + 0.9) = 1.2 * 1.9 = 2.28
+            [0.5, 0.5, 0.5, 0.5], # (0.5 + 1) * (1 + 0.5) = 1.5 * 1.5 = 2.25
         ]),
         torch.tensor([0, 1, 1, 0]),
-        torch.tensor([[1.0], [1.0]])
+        torch.tensor([[2.28], [2.25]])
     ),
     (
         "Complex OR of ANDs with Partial Marginalization: (x₁ ∧ ¬x₂) V (x₃ ∧ ¬x₄)",
-        # Marginalize only x₄. ¬x₄ -> p(x₄)
-        # Function: f = (p(x₁) * (1 - p(x₂))) + (p(x₃) * p(x₄))
+        # Marginalize only x₄. ¬x₄ -> 1
+        # Function: f = (p(x₁) * (1 - p(x₂))) + (p(x₃) * 1)
         lambda: nnf.OrNode('O1', [
             nnf.AndNode('A1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2, negated=True)]),
             nnf.AndNode('A2', [nnf.LiteralNode('L3', 3), nnf.LiteralNode('L4', 4, negated=True)]),
         ]),
         torch.tensor([
-            [0.9, 0.1, 0.8, 0.2], # (0.9 * 0.9) + (0.8 * 0.2) = 0.81 + 0.16 = 0.97
-            [0.5, 0.2, 0.3, 0.4], # (0.5 * 0.8) + (0.3 * 0.4) = 0.4 + 0.12 = 0.52
+            [0.9, 0.1, 0.8, 0.2], # (0.9 * 0.9) + (0.8 * 1) = 0.81 + 0.8 = 1.61
+            [0.5, 0.2, 0.3, 0.4], # (0.5 * 0.8) + (0.3 * 1) = 0.4 + 0.3 = 0.7
         ]),
         torch.tensor([0, 0, 0, 1]),
-        torch.tensor([[0.97], [0.52]])
+        torch.tensor([[1.61], [0.7]])
     )
 ]
 

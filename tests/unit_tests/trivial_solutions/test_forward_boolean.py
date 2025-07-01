@@ -63,34 +63,34 @@ standard_test_cases = [
 marginalized_test_cases = [
     (
         "Boolean Complex AND of ORs with Marginalization: (x₁ V ¬x₂) ∧ (¬x₃ V x₄)",
-        # Marginalize x₂ and x₃. ¬x₂ -> x₂, ¬x₃ -> x₃
-        # Function: f = (x₁ + x₂) * (x₃ + x₄)
+        # Marginalize x₂ and x₃. ¬x₂ -> 1, ¬x₃ -> 1
+        # Function: f = (x₁ + 1) * (1 + x₄)
         lambda: nnf.AndNode('A1', [
             nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2, negated=True)]),
             nnf.OrNode('O2', [nnf.LiteralNode('L3', 3, negated=True), nnf.LiteralNode('L4', 4)])
         ]),
         torch.tensor([
-            [1., 0., 1., 0.], # (1 + 0) * (1 + 0) = 1 * 1 = 1
-            [1., 1., 0., 1.], # (1 + 1) * (0 + 1) = 2 * 1 = 2
+            [1., 0., 1., 0.], # (1 + 1) * (1 + 0) = 2 * 1 = 2
+            [1., 1., 0., 1.], # (1 + 1) * (1 + 1) = 2 * 2 = 4
         ]),
         torch.tensor([0, 1, 1, 0]),
-        torch.tensor([[1.], [2.]])
+        torch.tensor([[2.], [4.]])
     ),
     (
         "Boolean OR of ANDs with Partial Marginalization: (x₁ ∧ ¬x₂) V (x₃ ∧ ¬x₄)",
-        # Marginalize only x₂. ¬x₂ -> x₂
-        # Function: f = (x₁ * x₂) + (x₃ * (1 - x₄))
+        # Marginalize only x₂. ¬x₂ -> 1
+        # Function: f = (x₁ * 1) + (x₃ * (1 - x₄))
         lambda: nnf.OrNode('O1', [
             nnf.AndNode('A1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2, negated=True)]),
             nnf.AndNode('A2', [nnf.LiteralNode('L3', 3), nnf.LiteralNode('L4', 4, negated=True)]),
         ]),
         torch.tensor([
             [1., 1., 1., 0.], # (1 * 1) + (1 * (1-0)) = 1 + 1 = 2
-            [1., 0., 1., 1.], # (1 * 0) + (1 * (1-1)) = 0 + 0 = 0
+            [1., 0., 1., 1.], # (1 * 1) + (1 * (1-1)) = 1 + 0 = 1
             [1., 1., 1., 1.], # (1 * 1) + (1 * (1-1)) = 1 + 0 = 1
         ]),
         torch.tensor([0, 1, 0, 0]),
-        torch.tensor([[2.], [0.], [1.]])
+        torch.tensor([[2.], [1.], [1.]])
     )
 ]
 
