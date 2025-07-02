@@ -28,29 +28,39 @@ class QueryExecutor:
         self._build_neural_network(executor_class, sdd_file)
         self._build_inputs(json_file)
     
-    def execute_query(self, query_variable):
+    def execute_query(self, query_variable, evidence_variables = []):
         """
         Executes a conditional probability query.
 
         Args:
             query_variable (int): The ID of the variable to query (e.g., P(X_i=1 | ...)).
-
+            evidence_variables (list): The IDs of the variables to use as evidence (e.g., [X_j=1, X_k=1]).
+        
         Returns:
             float: The calculated conditional probability P(query_variable | evidence).
         """
-        variable_index = self._get_variable_index(query_variable)
+        query_variable_index = self._get_query_variable_index(query_variable)
+        evidence_variables_indices = self._get_evidence_variables_indices(evidence_variables) if evidence_variables is not None else []
 
-        # 1. Calculate the numerator: P(query=1, evidence)
-        numerator_input, numerator_marginalized_vars = self._prepare_numerator_input(variable_index)
+        numerator_input, denominator_input = self._build_input_tensors(
+            query_variable_index,
+            evidence_variables_indices
+        )
+        numerator_marginalized_vars, denominator_marginalized_vars = self._build_marginalized_variables(
+            query_variable_index,
+            evidence_variables_indices
+        )
+
+        # 1. Calculate the numerator: P(query=1, evidence=1)
         numerator_prob = self.neural_network.forward(
             numerator_input,
             marginalized_variables=numerator_marginalized_vars
         ).item()
 
-        # 2. Calculate the denominator: P(evidence)
+        # 2. Calculate the denominator: P(evidence=1)
         denominator_prob = self.neural_network.forward(
-            self.input_tensor,
-            marginalized_variables=self.marginalized_variables
+            denominator_input,
+            marginalized_variables=denominator_marginalized_vars
         ).item()
 
         # 3. Compute conditional probability
@@ -58,7 +68,7 @@ class QueryExecutor:
             return 0.0        
         return numerator_prob / denominator_prob
     
-    def _get_variable_index(self, query_variable):
+    def _get_query_variable_index(self, query_variable):
         """
         Validates the query variable and converts it to a 0-based tensor index.
 
@@ -82,14 +92,50 @@ class QueryExecutor:
                                {self.input_tensor[variable_index]}")
 
         return variable_index
+    
+    def _get_evidence_variables_indices(self, evidence_variables):
+        """
+        Validates the evidence variables and converts them to 0-based tensor indices.
+        """
+        evidence_variables_indices = []
+        for evidence_variable in evidence_variables:
+            if evidence_variable < 1 or evidence_variable > self.input_tensor.numel():
+                raise ValueError(f"Evidence variable (X_{evidence_variable}) out of bounds \
+                                   for tensor of size {self.input_tensor.numel()}.")
+            evidence_variable_index = evidence_variable - 1
+            evidence_variables_indices.append(evidence_variable_index)
+        return evidence_variables_indices
 
-    def _prepare_numerator_input(self, variable_index):
-        """Prepares the input tensor for the P(query, evidence) calculation."""
+    def _build_input_tensors(self, query_variable_index, evidence_variables_indices):
+        """
+        Builds the input tensors for the numerator and denominator of the conditional probability.
+        """
         numerator_input = self.input_tensor.clone()
-        numerator_input[variable_index] = 1.0
-        numerator_marginalized_vars = self.marginalized_variables.clone()
-        numerator_marginalized_vars[variable_index] = 0
-        return numerator_input, numerator_marginalized_vars
+        denominator_input = self.input_tensor.clone()
+
+        numerator_input[query_variable_index] = 1
+
+        for evidence_variable in evidence_variables_indices:
+            numerator_input[evidence_variable] = 1
+            denominator_input[evidence_variable] = 1
+        
+        return numerator_input, denominator_input
+    
+    def _build_marginalized_variables(self, query_variable_index, evidence_variables_indices):
+        """
+        Builds the marginalized variables tensor for the denominator of the conditional probability.
+        """
+        numerator_marginalized_variables = self.marginalized_variables.clone()
+        denominator_marginalized_variables = self.marginalized_variables.clone()
+
+        numerator_marginalized_variables[query_variable_index] = 0
+        denominator_marginalized_variables[query_variable_index] = 1
+
+        for evidence_variable in evidence_variables_indices:
+            numerator_marginalized_variables[evidence_variable] = 0
+            denominator_marginalized_variables[evidence_variable] = 0
+        
+        return numerator_marginalized_variables, denominator_marginalized_variables
     
     def _build_neural_network(self, executor_class, sdd_file):
         """

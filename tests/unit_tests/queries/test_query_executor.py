@@ -63,11 +63,117 @@ def create_test_files(tmp_path):
 
     return _create_files
 
-# --- Test Cases ---
+# --- Test Cases for Successful Queries ---
+# Each tuple: (description, json_data, query_variable, evidence_variables, numerator_result, denominator_result, 
+#              expected_numerator_input, expected_numerator_marginalized, expected_denominator_input, expected_denominator_marginalized)
 
-def test_successful_query(monkeypatch, create_test_files):
+successful_query_test_cases = [
+    (
+        "Standard query without evidence",
+        {
+            "atom_mapping": {"1": "a", "2": "b", "3": "c"},
+            "prob": {"pfacts": [["1", "0.8"]]}
+        },
+        2, [], 0.4, 0.8,
+        torch.tensor([0.8, 1.0, 1.0]),
+        torch.tensor([0, 0, 1], dtype=torch.int64),
+        torch.tensor([0.8, 1.0, 1.0]),
+        torch.tensor([0, 1, 1], dtype=torch.int64)
+    ),
+    (
+        "Query with evidence variables",
+        {
+            "atom_mapping": {"1": "a", "2": "b", "3": "c", "4": "d"},
+            "prob": {"pfacts": [["1", "0.8"], ["3", "0.6"]]}
+        },
+        2, [1, 4], 0.3, 0.5,
+        torch.tensor([1.0, 1.0, 0.6, 1.0]),
+        torch.tensor([0, 0, 0, 0], dtype=torch.int64),
+        torch.tensor([1.0, 1.0, 0.6, 1.0]),
+        torch.tensor([0, 1, 0, 0], dtype=torch.int64)
+    ),
+    (
+        "Query with non-probabilistic evidence variable",
+        {
+            "atom_mapping": {"1": "a", "2": "b", "3": "c", "4": "d"},
+            "prob": {"pfacts": [["1", "0.8"], ["3", "0.6"]]}
+        },
+        2, [1, 3], 0.3, 0.5,
+        torch.tensor([1.0, 1.0, 1.0, 1.0]),
+        torch.tensor([0, 0, 0, 1], dtype=torch.int64),
+        torch.tensor([1.0, 1.0, 1.0, 1.0]),
+        torch.tensor([0, 1, 0, 1], dtype=torch.int64)
+    ),
+    (
+        "Query with empty evidence variables list",
+        {
+            "atom_mapping": {"1": "a", "2": "b", "3": "c"},
+            "prob": {"pfacts": [["1", "0.8"]]}
+        },
+        2, [], 0.4, 0.8,
+        torch.tensor([0.8, 1.0, 1.0]),
+        torch.tensor([0, 0, 1], dtype=torch.int64),
+        torch.tensor([0.8, 1.0, 1.0]),
+        torch.tensor([0, 1, 1], dtype=torch.int64)
+    ),
+]
+
+# --- Test Cases for Error Handling ---
+# Each tuple: (description, json_data, query_variable, evidence_variables, expected_error_type, expected_error_message)
+
+error_test_cases = [
+    (
+        "Query on evidence variable raises error",
+        {
+            "atom_mapping": {"1": "a", "2": "b"},
+            "prob": {"pfacts": [["1", "0.9"]]}
+        },
+        1, [], ValueError, "Probability is already known for X_1"
+    ),
+    (
+        "Query variable out of bounds (too high)",
+        {"atom_mapping": {"1": "a", "2": "b"}},
+        3, [], ValueError, "Query variable .* out of bounds"
+    ),
+    (
+        "Query variable out of bounds (zero)",
+        {"atom_mapping": {"1": "a", "2": "b"}},
+        0, [], ValueError, "Query variable .* out of bounds"
+    ),
+    (
+        "Evidence variable out of bounds (too high)",
+        {"atom_mapping": {"1": "a", "2": "b"}},
+        1, [3], ValueError, "Evidence variable .* out of bounds"
+    ),
+    (
+        "Evidence variable out of bounds (zero)",
+        {"atom_mapping": {"1": "a", "2": "b"}},
+        1, [0], ValueError, "Evidence variable .* out of bounds"
+    ),
+]
+
+# --- Test Cases for Zero Denominator ---
+# Each tuple: (description, json_data, query_variable, evidence_variables, mock_logic)
+
+zero_denominator_test_cases = [
+    (
+        "Zero denominator without evidence",
+        {"atom_mapping": {"1": "a", "2": "b"}},
+        1, [],
+        lambda marginalized_variables: torch.tensor([0.0]) if torch.equal(marginalized_variables, torch.tensor([1, 1], dtype=torch.int64)) else torch.tensor([0.1])
+    ),
+    (
+        "Zero denominator with evidence",
+        {"atom_mapping": {"1": "a", "2": "b", "3": "c"}},
+        2, [1],
+        lambda marginalized_variables: torch.tensor([0.0]) if torch.equal(marginalized_variables, torch.tensor([0, 1, 1], dtype=torch.int64)) else torch.tensor([0.1])
+    ),
+]
+
+@pytest.mark.parametrize("description, json_data, query_variable, evidence_variables, numerator_result, denominator_result, expected_numerator_input, expected_numerator_marginalized, expected_denominator_input, expected_denominator_marginalized", successful_query_test_cases)
+def test_successful_queries(monkeypatch, create_test_files, description, json_data, query_variable, evidence_variables, numerator_result, denominator_result, expected_numerator_input, expected_numerator_marginalized, expected_denominator_input, expected_denominator_marginalized):
     """
-    Tests a standard, successful query execution using the built-in monkeypatch fixture.
+    Tests successful query executions with various configurations.
     """
     class MockForwarder:
         """
@@ -86,87 +192,55 @@ def test_successful_query(monkeypatch, create_test_files):
             self.call_count += 1
             return value_to_return
 
-    # 1. Setup: Create test files and prepare the mock forwarder
-    json_data = {
-        "atom_mapping": {"1": "a", "2": "b", "3": "c"},
-        "prob": {"pfacts": [["1", "0.8"]]}
-    }
     sdd_file, json_file = create_test_files(json_data)
     
     mock_forwarder = MockForwarder(return_values=[
-        torch.tensor([0.4]), # Mocked result for the numerator call
-        torch.tensor([0.8])  # Mocked result for the denominator call
+        torch.tensor([numerator_result]),   # Mocked result for the numerator call
+        torch.tensor([denominator_result])  # Mocked result for the denominator call
     ])
     
     # Replace 'forward' method with the mock forwarder
     monkeypatch.setattr(MockExecutorNN, 'forward', mock_forwarder)
 
-    # 2. Execution: Initialize and run the query
     executor = QueryExecutor(MockExecutorNN, sdd_file, json_file)
-    result = executor.execute_query(query_variable=2)
+    result = executor.execute_query(query_variable=query_variable, evidence_variables=evidence_variables)
 
-    # 3. Assertions
-    assert result == pytest.approx(0.4 / 0.8)
+    assert result == pytest.approx(numerator_result / denominator_result)
     assert mock_forwarder.call_count == 2
     
     numerator_call_args = mock_forwarder.call_args_list[0]
-    assert torch.equal(numerator_call_args['input'], torch.tensor([0.8, 1.0, 1.0]))
-    assert torch.equal(numerator_call_args['marginalized'], torch.tensor([0, 0, 1], dtype=torch.int64))
+    assert torch.equal(numerator_call_args['input'], expected_numerator_input)
+    assert torch.equal(numerator_call_args['marginalized'], expected_numerator_marginalized)
 
     denominator_call_args = mock_forwarder.call_args_list[1]
-    assert torch.equal(denominator_call_args['input'], torch.tensor([0.8, 1.0, 1.0]))
-    assert torch.equal(denominator_call_args['marginalized'], torch.tensor([0, 1, 1], dtype=torch.int64))
+    assert torch.equal(denominator_call_args['input'], expected_denominator_input)
+    assert torch.equal(denominator_call_args['marginalized'], expected_denominator_marginalized)
 
-def test_query_on_evidence_variable_raises_error(create_test_files):
+@pytest.mark.parametrize("description, json_data, query_variable, evidence_variables, expected_error_type, expected_error_message", error_test_cases)
+def test_error_handling(create_test_files, description, json_data, query_variable, evidence_variables, expected_error_type, expected_error_message):
     """
-    Tests that querying for a variable that is already part of the evidence
-    (i.e., not marginalized) raises a ValueError.
+    Tests error handling for various invalid inputs.
     """
-    json_data = {
-        "atom_mapping": {"1": "a", "2": "b"},
-        "prob": {"pfacts": [["1", "0.9"]]}
-    }
     sdd_file, json_file = create_test_files(json_data)
-    
     executor = QueryExecutor(MockExecutorNN, sdd_file, json_file)
 
-    with pytest.raises(ValueError, match="Probability is already known for X_1"):
-        executor.execute_query(query_variable=1)
+    with pytest.raises(expected_error_type, match=expected_error_message):
+        executor.execute_query(query_variable=query_variable, evidence_variables=evidence_variables)
 
-def test_query_out_of_bounds_raises_error(create_test_files):
+@pytest.mark.parametrize("description, json_data, query_variable, evidence_variables, mock_logic", zero_denominator_test_cases)
+def test_zero_denominator_handling(monkeypatch, create_test_files, description, json_data, query_variable, evidence_variables, mock_logic):
     """
-    Tests that querying for a variable outside the valid range raises a ValueError.
+    Tests that queries with zero denominator return 0.0 without division-by-zero errors.
     """
-    json_data = {"atom_mapping": {"1": "a", "2": "b"}}
     sdd_file, json_file = create_test_files(json_data)
     
-    executor = QueryExecutor(MockExecutorNN, sdd_file, json_file)
-
-    with pytest.raises(ValueError, match="Query variable .* out of bounds"):
-        executor.execute_query(query_variable=3)
-        
-    with pytest.raises(ValueError, match="Query variable .* out of bounds"):
-        executor.execute_query(query_variable=0)
-
-def test_query_with_zero_denominator(monkeypatch, create_test_files):
-    """
-    Tests that if the probability of the evidence (denominator) is zero,
-    the query returns 0.0 without a division-by-zero error.
-    """
-    json_data = {"atom_mapping": {"1": "a", "2": "b"}}
-    sdd_file, json_file = create_test_files(json_data)
-    
-    # Mock the forward method to return a zero for the denominator
+    # Mock the forward method to return zero for denominator
     def mock_forward_logic(self, input_tensor, marginalized_variables=None):
-        # If this is the denominator call (original marginalized vars), return 0
-        if torch.equal(marginalized_variables, torch.tensor([1, 1], dtype=torch.int64)):
-            return torch.tensor([0.0])
-        # Otherwise, return a non-zero numerator
-        return torch.tensor([0.1])
+        return mock_logic(marginalized_variables)
         
     monkeypatch.setattr(MockExecutorNN, 'forward', mock_forward_logic)
     
     executor = QueryExecutor(MockExecutorNN, sdd_file, json_file)
-    result = executor.execute_query(query_variable=1)
+    result = executor.execute_query(query_variable=query_variable, evidence_variables=evidence_variables)
     
     assert result == 0.0
