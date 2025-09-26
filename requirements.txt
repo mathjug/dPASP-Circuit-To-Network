@@ -1,3 +1,5 @@
 pandas
 torch
 pytest
+cython
+pysdd

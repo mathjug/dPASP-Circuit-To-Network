@@ -9,10 +9,10 @@ class IterativeNN(nn.Module):
     """
     Neural Network representation of a NNF, with a bottom-up, iterative forward pass.
     """
-    def __init__(self, nnf_root):
+    def __init__(self, sdd_file, json_file):
         super().__init__()
         network_builder = NetworkBuilder(ORNode, ANDNode)
-        self.root = network_builder.build_network(nnf_root)
+        self.root = network_builder.build_network(sdd_file, json_file)
         self.execution_order = self._topological_sort()
 
     def _topological_sort(self):
@@ -37,7 +37,7 @@ class IterativeNN(nn.Module):
         visit(self.root)
         return sorted_nodes
 
-    def forward(self, x, marginalized_variables = None):
+    def forward(self, x):
         """
         Executes the forward pass using the pre-computed execution order.
         
@@ -57,7 +57,7 @@ class IterativeNN(nn.Module):
                 child_outputs_tensor = torch.cat(child_outputs_list, dim=1)
                 output = node.forward(child_outputs_tensor)
             else:
-                output = node.forward(x, marginalized_variables)
+                output = node.forward(x)
             node_outputs[id(node)] = output
             
         return node_outputs[id(self.root)]

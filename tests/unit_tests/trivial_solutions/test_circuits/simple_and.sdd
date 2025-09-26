@@ -1,0 +1,5 @@
+c Simple test: x1 AND x2
+sdd 3
+L 1 0 1
+L 2 0 2
+D 0 1 1 1 2

@@ -1,0 +1,12 @@
+c Memoization test: ((x1 AND x2) OR x3) AND ((x1 AND x2) OR x4) - shared subexpressions
+c This circuit has the subexpression (x1 AND x2) appearing twice
+sdd 9
+L 1 0 1
+L 2 0 2
+L 3 0 3
+L 4 0 4
+T 5
+D 6 1 1 1 2
+D 7 1 2 6 5 3 5
+D 8 1 2 6 5 4 5
+D 0 1 1 7 8

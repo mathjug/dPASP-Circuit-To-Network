@@ -38,16 +38,11 @@ def test_successful_parsing(valid_json_file):
     expected_probs = {1: 0.1, 2: 0.2}
     assert parser.variable_to_prob == expected_probs
 
-    torch.testing.assert_close(parser.marginalized_variables, torch.tensor([0, 0, 1]))
-    torch.testing.assert_close(parser.input_tensor, torch.tensor([0.1, 0.2, 1.0]))
-
 def test_file_not_found():
     """Tests the parser's behavior when the file does not exist."""
     parser = ProbabilitiesParser("non_existent_file.json")
     assert parser.variable_to_atom == {}
     assert parser.variable_to_prob == {}
-    assert parser.marginalized_variables.numel() == 0
-    assert parser.input_tensor.numel() == 0
 
 def test_invalid_json(tmp_path):
     """Tests the parser's behavior with a malformed JSON file."""
@@ -58,8 +53,6 @@ def test_invalid_json(tmp_path):
     parser = ProbabilitiesParser(invalid_json_path)
     assert parser.variable_to_atom == {}
     assert parser.variable_to_prob == {}
-    assert parser.marginalized_variables.numel() == 0
-    assert parser.input_tensor.numel() == 0
 
 def test_missing_prob_field(tmp_path):
     """Tests parsing when the 'prob' field is missing from the JSON."""
@@ -71,8 +64,6 @@ def test_missing_prob_field(tmp_path):
     parser = ProbabilitiesParser(file_path)
     assert parser.variable_to_atom == {"1": "a", "2": "b"}
     assert parser.variable_to_prob == {}
-    torch.testing.assert_close(parser.marginalized_variables, torch.tensor([1, 1]))
-    torch.testing.assert_close(parser.input_tensor, torch.tensor([1.0, 1.0]))
 
 def test_missing_atom_mapping(tmp_path):
     """Tests parsing when the 'atom_mapping' field is missing."""
@@ -83,5 +74,3 @@ def test_missing_atom_mapping(tmp_path):
             
     parser = ProbabilitiesParser(file_path)
     assert parser.variable_to_atom == {}
-    assert parser.input_tensor.numel() == 0
-    assert parser.marginalized_variables.numel() == 0

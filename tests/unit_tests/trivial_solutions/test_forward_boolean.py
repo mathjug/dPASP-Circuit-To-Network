@@ -6,173 +6,95 @@ analytically calculated expected output.
 
 Note that the OR operation is implemented as summation, so `1 V 1` will result
 in `2.0`, not `1.0`.
-
-Tests are divided into two main scenarios:
-1. Standard Forward Pass: Evaluates circuits with boolean inputs.
-2. Marginalized Forward Pass: Evaluates circuits where the behavior of negated
-   literals is altered for specific "marginalized" variables.
 """
 
 import torch
 import pytest
+import os
 
-import src.parser.nnf_parser as nnf
 from tests.utils.utils import implementations
 
 # --- Test Cases for Standard Forward Pass ---
-# Each tuple: (description, nnf_circuit, input_data, marginalized_vars, expected_output)
+# Each tuple: (description, sdd_file, json_file, input_data, expected_output)
+
+# Get the directory where this test file is located
+test_dir = os.path.dirname(os.path.abspath(__file__))
+circuit_dir = os.path.join(test_dir, "test_circuits")
 
 standard_test_cases = [
     (
-        "Boolean Complex AND of ORs: (x₁ V ¬x₂) ∧ (¬x₃ V x₄)",
-        # Circuit function: f = (x₁ + (1 - x₂)) * ((1 - x₃) + x₄)
-        lambda: nnf.AndNode('A1', [
-            nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2, negated=True)]),
-            nnf.OrNode('O2', [nnf.LiteralNode('L3', 3, negated=True), nnf.LiteralNode('L4', 4)])
-        ]),
+        "Simple AND: x₁ ∧ x₂",
+        os.path.join(circuit_dir, "simple_and.sdd"),
+        os.path.join(circuit_dir, "simple_and.json"),
         torch.tensor([
-            [1., 0., 1., 0.],  # (1 + (1-0)) * ((1-1) + 0) = 2 * 0 = 0
-            [1., 1., 0., 1.],  # (1 + (1-1)) * ((1-0) + 1) = 1 * 2 = 2
-            [0., 0., 0., 0.],  # (0 + (1-0)) * ((1-0) + 0) = 1 * 1 = 1
-            [1., 0., 0., 1.],  # (1 + (1-0)) * ((1-0) + 1) = 2 * 2 = 4
+            [1., 0., 1., 0.],  # x1=1, ¬x1=0, x2=1, ¬x2=0 -> 1 AND 1 = 1
+            [1., 0., 0., 1.],  # x1=1, ¬x1=0, x2=0, ¬x2=1 -> 1 AND 0 = 0
+            [0., 1., 1., 0.],  # x1=0, ¬x1=1, x2=1, ¬x2=0 -> 0 AND 1 = 0
+            [0., 1., 0., 1.]   # x1=0, ¬x1=1, x2=0, ¬x2=1 -> 0 AND 0 = 0
         ]),
-        torch.tensor([0, 0, 0, 0]),
-        torch.tensor([[0.], [2.], [1.], [4.]])
+        torch.tensor([[1.], [0.], [0.], [0.]])
     ),
     (
-        "Boolean OR of ANDs with True/False: (x₁ ∧ ¬x₂) V (x₃ ∧ True) V (x₄ ∧ False)",
-        # Circuit function: f = (x₁ * (1 - x₂)) + (x₃ * 1) + (x₄ * 0)
-        lambda: nnf.OrNode('O1', [
-            nnf.AndNode('A1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2, negated=True)]),
-            nnf.AndNode('A2', [nnf.LiteralNode('L3', 3), nnf.TrueNode('T')]),
-            nnf.AndNode('A3', [nnf.LiteralNode('L4', 4), nnf.FalseNode('F')])
-        ]),
+        "Simple OR: x₁ V x₂",
+        os.path.join(circuit_dir, "simple_or.sdd"),
+        os.path.join(circuit_dir, "simple_or.json"),
         torch.tensor([
-            [1., 0., 1., 1.], # (1 * 1) + (1 * 1) + (1 * 0) = 1 + 1 + 0 = 2
-            [1., 1., 0., 1.], # (1 * 0) + (0 * 1) + (1 * 0) = 0 + 0 + 0 = 0
-            [0., 0., 1., 0.], # (0 * 1) + (1 * 1) + (0 * 0) = 0 + 1 + 0 = 1
+            [1., 0., 1., 0.],  # x1=1, ¬x1=0, x2=1, ¬x2=0 -> 1 OR 1 = 2 (1+1)
+            [1., 0., 0., 1.],  # x1=1, ¬x1=0, x2=0, ¬x2=1 -> 1 OR 0 = 1 (1+0)
+            [0., 1., 1., 0.],  # x1=0, ¬x1=1, x2=1, ¬x2=0 -> 0 OR 1 = 1 (0+1)
+            [0., 1., 0., 1.]   # x1=0, ¬x1=1, x2=0, ¬x2=1 -> 0 OR 0 = 0 (0+0)
         ]),
-        torch.tensor([0, 0, 0, 0]),
-        torch.tensor([[2.], [0.], [1.]])
+        torch.tensor([[2.], [1.], [1.], [0.]])
     ),
-]
-
-# --- Test Cases for Marginalized Forward Pass ---
-# Each tuple: (description, nnf_circuit, input_data, marginalized_vars, expected_output)
-
-marginalized_test_cases = [
-    (
-        "Boolean Complex AND of ORs with Marginalization: (x₁ V ¬x₂) ∧ (¬x₃ V x₄)",
-        # Marginalize x₂ and x₃. ¬x₂ -> 1, ¬x₃ -> 1
-        # Function: f = (x₁ + 1) * (1 + x₄)
-        lambda: nnf.AndNode('A1', [
-            nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2, negated=True)]),
-            nnf.OrNode('O2', [nnf.LiteralNode('L3', 3, negated=True), nnf.LiteralNode('L4', 4)])
-        ]),
-        torch.tensor([
-            [1., 0., 1., 0.], # (1 + 1) * (1 + 0) = 2 * 1 = 2
-            [1., 1., 0., 1.], # (1 + 1) * (1 + 1) = 2 * 2 = 4
-        ]),
-        torch.tensor([0, 1, 1, 0]),
-        torch.tensor([[2.], [4.]])
-    ),
-    (
-        "Boolean OR of ANDs with Partial Marginalization: (x₁ ∧ ¬x₂) V (x₃ ∧ ¬x₄)",
-        # Marginalize only x₂. ¬x₂ -> 1
-        # Function: f = (x₁ * 1) + (x₃ * (1 - x₄))
-        lambda: nnf.OrNode('O1', [
-            nnf.AndNode('A1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2, negated=True)]),
-            nnf.AndNode('A2', [nnf.LiteralNode('L3', 3), nnf.LiteralNode('L4', 4, negated=True)]),
-        ]),
-        torch.tensor([
-            [1., 1., 1., 0.], # (1 * 1) + (1 * (1-0)) = 1 + 1 = 2
-            [1., 0., 1., 1.], # (1 * 1) + (1 * (1-1)) = 1 + 0 = 1
-            [1., 1., 1., 1.], # (1 * 1) + (1 * (1-1)) = 1 + 0 = 1
-        ]),
-        torch.tensor([0, 1, 0, 0]),
-        torch.tensor([[2.], [1.], [1.]])
-    )
 ]
 
 # --- Test Cases for Memoization Cache Verification ---
-# Each tuple: (description, nnf_circuit, input_data, marginalized_vars, expected_output)
+# Each tuple: (description, sdd_file, json_file, input_data, expected_output)
 
 memoization_test_cases = [
     (
-        "Boolean Circuit with Shared Subexpressions: (x₁ V x₂) ∧ (x₁ V x₂)",
-        lambda: nnf.AndNode('A1', [
-            nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
-            nnf.OrNode('O2', [nnf.LiteralNode('L3', 1), nnf.LiteralNode('L4', 2)])
-        ]),
+        "Memoization Test 1: (x₁ V x₂) ∧ (x₁ V x₂) - shared subexpressions",
+        os.path.join(circuit_dir, "memoization_test.sdd"),
+        os.path.join(circuit_dir, "memoization_test.json"),
         torch.tensor([
-            [1., 0.],  # (1 + 0) * (1 + 0) = 1 * 1 = 1
-            [1., 1.],  # (1 + 1) * (1 + 1) = 2 * 2 = 4
-            [0., 0.],  # (0 + 0) * (0 + 0) = 0 * 0 = 0
+            [1., 0., 1., 0.],  # (1 OR 1) AND (1 OR 1) = 2 AND 2 = 4
+            [1., 0., 0., 1.],  # (1 OR 0) AND (1 OR 0) = 1 AND 1 = 1
+            [0., 1., 1., 0.],  # (0 OR 1) AND (0 OR 1) = 1 AND 1 = 1
+            [0., 1., 0., 1.]   # (0 OR 0) AND (0 OR 0) = 0 AND 0 = 0
         ]),
-        torch.tensor([0, 0]),
-        torch.tensor([[1.], [4.], [0.]])
+        torch.tensor([[4.], [1.], [1.], [0.]])
     ),
     (
-        "Boolean Complex Circuit with Multiple Shared Nodes: ((x₁ V x₂) ∧ x₃) V ((x₁ V x₂) ∧ x₄)",
-        lambda: nnf.OrNode('O1', [
-            nnf.AndNode('A1', [
-                nnf.OrNode('O2', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
-                nnf.LiteralNode('L3', 3)
-            ]),
-            nnf.AndNode('A2', [
-                nnf.OrNode('O3', [nnf.LiteralNode('L4', 1), nnf.LiteralNode('L5', 2)]),
-                nnf.LiteralNode('L6', 4)
-            ])
-        ]),
+        "Memoization Test 2: ((x₁ ∧ x₂) V x₃) ∧ ((x₁ ∧ x₂) V x₄) - shared subexpressions",
+        os.path.join(circuit_dir, "memoization_test2.sdd"),
+        os.path.join(circuit_dir, "memoization_test2.json"),
         torch.tensor([
-            [1., 0., 1., 1.],  # ((1+0)*1) + ((1+0)*1) = 1 + 1 = 2
-            [1., 1., 0., 0.],  # ((1+1)*0) + ((1+1)*0) = 0 + 0 = 0
-            [0., 0., 1., 1.],  # ((0+0)*1) + ((0+0)*1) = 0 + 0 = 0
+            [1., 0., 1., 0., 0., 1., 0., 1.],  # ((1 AND 1) OR 0) AND ((1 AND 1) OR 0) = (1 OR 0) AND (1 OR 0) = 1 AND 1 = 1
+            [1., 0., 0., 1., 1., 0., 1., 0.],  # ((1 AND 0) OR 1) AND ((1 AND 0) OR 1) = (0 OR 1) AND (0 OR 1) = 1 AND 1 = 1
+            [0., 1., 1., 0., 1., 0., 1., 0.],  # ((0 AND 1) OR 1) AND ((0 AND 1) OR 1) = (0 OR 1) AND (0 OR 1) = 1 AND 1 = 1
         ]),
-        torch.tensor([0, 0, 0, 0]),
-        torch.tensor([[2.], [0.], [0.]])
-    ),
-    (
-        "Boolean Deep Circuit with Shared Paths: ((x₁ ∧ x₂) V x₃) ∧ ((x₁ ∧ x₂) V x₄)",
-        lambda: nnf.AndNode('A1', [
-            nnf.OrNode('O1', [
-                nnf.AndNode('A2', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
-                nnf.LiteralNode('L3', 3)
-            ]),
-            nnf.OrNode('O2', [
-                nnf.AndNode('A3', [nnf.LiteralNode('L4', 1), nnf.LiteralNode('L5', 2)]),
-                nnf.LiteralNode('L6', 4)
-            ])
-        ]),
-        torch.tensor([
-            [1., 1., 0., 0.],  # ((1*1)+0) * ((1*1)+0) = 1 * 1 = 1
-            [1., 0., 1., 1.],  # ((1*0)+1) * ((1*0)+1) = 1 * 1 = 1
-            [0., 1., 1., 1.],  # ((0*1)+1) * ((0*1)+1) = 1 * 1 = 1
-        ]),
-        torch.tensor([0, 0, 0, 0]),
         torch.tensor([[1.], [1.], [1.]])
-    )
+    ),
 ]
 
-test_cases = standard_test_cases + marginalized_test_cases + memoization_test_cases
+test_cases = standard_test_cases + memoization_test_cases
 
 @pytest.mark.parametrize("implementation", implementations, ids=[i['name'] for i in implementations])
-@pytest.mark.parametrize("description, nnf_circuit, input_data, marginalized_vars, expected_output", test_cases)
-def test_forward_pass_boolean_marginalized(implementation, description, nnf_circuit, input_data, marginalized_vars, expected_output):
+@pytest.mark.parametrize("description, sdd_file, json_file, input_data, expected_output", test_cases)
+def test_forward_pass_boolean(implementation, description, sdd_file, json_file, input_data, expected_output):
     """
     Tests the forward pass output against analytical results using boolean inputs.
     """
     full_description = f"{description} ({implementation['name']} Implementation)"
-    print(f"Testing marginalized boolean forward pass: {full_description}")
+    print(f"Testing boolean forward pass: {full_description}")
 
-    root_node = nnf_circuit()
     implementation_class = implementation["implementation_class"]
-    neural_network = implementation_class(root_node)
+    neural_network = implementation_class(sdd_file, json_file)
 
-    computed_output = neural_network.forward(input_data, marginalized_variables=marginalized_vars)
+    computed_output = neural_network.forward(input_data)
 
     torch.testing.assert_close(
         computed_output,
         expected_output,
-        msg=f"Output mismatch for marginalized circuit: {full_description}\n Expected: {expected_output}\n Actual: {computed_output}\n"
+        msg=f"Output mismatch for boolean circuit: {full_description}\n Expected: {expected_output}\n Actual: {computed_output}\n"
     )

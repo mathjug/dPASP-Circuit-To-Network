@@ -1,0 +1,52 @@
+{
+  "atom_mapping": {
+      "1": "x1",
+      "2": "x2",
+      "3": "x3",
+      "4": "x4"
+  },
+  "rules": {
+      "normal": [],
+      "disjunctive": [],
+      "choice": []
+  },
+  "head_rules": {},
+  "metadata": {
+      "num_atoms": 4,
+      "num_rules": 0,
+      "num_pfacts": 0,
+      "num_ads": 0,
+      "num_drules": 0,
+      "num_crules": 0
+  },
+  "prob": {
+      "pfacts": [
+        [
+            1,
+            0.5
+        ],
+        [
+            2,
+            0.5
+        ],
+        [
+            3,
+            0.5
+        ],
+        [
+            4,
+            0.5
+        ]
+      ],
+      "ads": [],
+      "pvars": [
+          1,
+          2,
+          3,
+          4
+      ]
+  },
+  "exactly_one_constraints": [],
+  "loops": [],
+  "loop_formulas": []
+}

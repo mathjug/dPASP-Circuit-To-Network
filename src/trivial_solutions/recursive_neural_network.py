@@ -8,11 +8,11 @@ class RecursiveNN(nn.Module):
     """
     Neural Network representation of a NNF, with a top-down, recursive forward pass.
     """
-    def __init__(self, root):
+    def __init__(self, sdd_file, json_file):
         super().__init__()
         network_builder = NetworkBuilder(ORNode, ANDNode)
-        self.root = network_builder.build_network(root)
+        self.root = network_builder.build_network(sdd_file, json_file)
 
-    def forward(self, x, marginalized_variables = None):
+    def forward(self, x):
         memoization_cache = {}
-        return self.root.forward(x, marginalized_variables, memoization_cache)
+        return self.root.forward(x, memoization_cache)

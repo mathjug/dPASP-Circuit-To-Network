@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 
+from src.trivial_solutions.entities.literal_node import LiteralNodeModule
+
 class BaseANDNode(nn.Module):
     """
     Base class for AND nodes.
@@ -24,13 +26,12 @@ class RecursiveANDNode(BaseANDNode):
     def __init__(self, children_nodes, node_id=None):
         super().__init__(children_nodes, node_id)
 
-    def forward(self, x, marginalized_variables = None, memoization_cache = None):
+    def forward(self, x, memoization_cache = None):
         """
         Forward pass with memoization support.
         
         Args:
             x: Input tensor
-            marginalized_variables: Marginalized variables tensor
             memoization_cache: Dictionary to cache node outputs by node_id
             
         Returns:
@@ -42,10 +43,7 @@ class RecursiveANDNode(BaseANDNode):
         if self.node_id is not None and self.node_id in memoization_cache:
             return memoization_cache[self.node_id]
         
-        child_outputs = torch.cat([
-            child.forward(x, marginalized_variables, memoization_cache) 
-            for child in self.children_nodes
-        ], dim=1)
+        child_outputs = torch.cat([child.forward(x, memoization_cache) for child in self.children_nodes], dim=1)
         output = torch.prod(child_outputs, dim=1, keepdim=True)
         
         if self.node_id is not None:

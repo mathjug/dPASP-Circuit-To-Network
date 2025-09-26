@@ -15,7 +15,6 @@ import torch
 import pytest
 import os
 from src.queries.query_executor import QueryExecutor
-from tests.utils.utils import implementations
 
 @pytest.fixture
 def alarm_files():
@@ -24,19 +23,20 @@ def alarm_files():
     examples_dir = os.path.join(current_dir, "..", "..", "examples", "alarm")
     sdd_file = os.path.join(examples_dir, "alarm_balanced.sdd")
     json_file = os.path.join(examples_dir, "alarm.json")
-    return sdd_file, json_file
+    vtree_file = os.path.join(examples_dir, "alarm_balanced.vtree")
+    return sdd_file, json_file, vtree_file
 
 # Test cases for alarm queries
 # Each tuple: (description, query_variable, evidence_variables, expected_output)
 alarm_test_cases = [
     ("P(alarm)", 4, None, 0.28),
+    ("P(hears_alarm)", 3, [], 0.7),
     ("P(alarm | burglary=1)", 4, [1], 1.0),
     ("P(alarm | hears_alarm=1)", 4, [3], 0.28),
     ("P(alarm | calls=1)", 4, [5], 1.0),
     ("P(alarm | alarm=1)", 4, [4], 1.0),
     ("P(alarm | earthquake=1, burglary=1)", 4, [1, 2], 1.0),
     ("P(alarm | hears_alarm=1, earthquake=1)", 4, [3, 2], 1.0),
-    ("P(alarm | [])", 4, [], 0.28),
 ]
 
 # Test cases for calls queries
@@ -56,19 +56,18 @@ calls_test_cases = [
 
 all_test_cases = alarm_test_cases + calls_test_cases
 
-@pytest.mark.parametrize("implementation", implementations, ids=[i['name'] for i in implementations])
 @pytest.mark.parametrize("description, query_variable, evidence_variables, expected_output", all_test_cases)
-def test_query_executor_integration(implementation, alarm_files, description, query_variable, evidence_variables, expected_output):
+def test_query_executor_integration(alarm_files, description, query_variable, evidence_variables, expected_output):
     """
     Tests the QueryExecutor integration with various query and evidence combinations.
     """
-    sdd_file, json_file = alarm_files
+    sdd_file, json_file, vtree_file = alarm_files
     
-    executor = QueryExecutor(implementation["implementation_class"], sdd_file, json_file)
+    executor = QueryExecutor(sdd_file, json_file, vtree_file)
     result = executor.execute_query(query_variable=query_variable, evidence_variables=evidence_variables)
     
     torch.testing.assert_close(
         result, 
         expected_output,
-        msg=f"Query mismatch for {description} ({implementation['name']} Implementation)\n Expected: {expected_output}\n Actual: {result}\n"
+        msg=f"Query mismatch for {description}\n Expected: {expected_output}\n Actual: {result}\n"
     )

@@ -1,122 +1,103 @@
 """
 This test file is dedicated to verifying the correctness of the backward pass
-for both RecursiveNN and IterativeNN implementations, using boolean inputs.
+for both RecursiveNN and IterativeNN implementations, using logic variables.
 It checks if the computed gradients of various circuits matches the analytically
 calculated expected gradients.
-
-Tests are divided into two main scenarios:
-1. Standard Forward Pass: Evaluates circuits with boolean inputs.
-2. Marginalized Forward Pass: Evaluates circuits where the behavior of negated
-   literals is altered for specific "marginalized" variables.
 """
 
 import torch
 import pytest
+import os
 
-import src.parser.nnf_parser as nnf
 from tests.utils.utils import calculate_individual_gradients, implementations
 
+test_dir = os.path.dirname(os.path.abspath(__file__))
+circuit_dir = os.path.join(test_dir, "test_circuits")
+
 # --- Test Cases for Boolean Backward Pass ---
-# Each tuple: (description, nnf_circuit, input_data, expected_gradients)
+# Each tuple: (description, sdd_file, json_file, input_data, expected_gradients)
 
 test_cases = [
     (
         "Simple AND: x₁ ∧ x₂",
-        lambda: nnf.AndNode('A1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
-        torch.tensor([[0., 0.], [0., 1.], [1., 0.], [1., 1.]]),
-        torch.tensor([[0., 0.], [1., 0.], [0., 1.], [1., 1.]])
+        os.path.join(circuit_dir, "simple_and.sdd"),
+        os.path.join(circuit_dir, "simple_and.json"),
+        torch.tensor([
+            [1., 0., 1., 0.],  # x1=1, ¬x1=0, x2=1, ¬x2=0 -> 1 AND 1 = 1
+            [1., 0., 0., 1.],  # x1=1, ¬x1=0, x2=0, ¬x2=1 -> 1 AND 0 = 0
+            [0., 1., 1., 0.],  # x1=0, ¬x1=1, x2=1, ¬x2=0 -> 0 AND 1 = 0
+            [0., 1., 0., 1.]   # x1=0, ¬x1=1, x2=0, ¬x2=1 -> 0 AND 0 = 0
+        ]),
+        torch.tensor([
+            [1., 0., 1., 0.],  # ∂f/∂x1=1, ∂f/∂¬x1=0, ∂f/∂x2=1, ∂f/∂¬x2=0
+            [0., 0., 1., 0.],  # ∂f/∂x1=0, ∂f/∂¬x1=0, ∂f/∂x2=1, ∂f/∂¬x2=0
+            [1., 0., 0., 0.],  # ∂f/∂x1=1, ∂f/∂¬x1=0, ∂f/∂x2=0, ∂f/∂¬x2=0
+            [0., 0., 0., 0.]   # ∂f/∂x1=0, ∂f/∂¬x1=0, ∂f/∂x2=0, ∂f/∂¬x2=0
+        ])
     ),
     (
         "Simple OR: x₁ V x₂",
-        lambda: nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
-        torch.tensor([[0., 0.], [0., 1.], [1., 0.], [1., 1.]]),
-        torch.tensor([[1., 1.], [1., 1.], [1., 1.], [1., 1.]])
-    ),
-    (
-        "Simple Negation: ¬x₁",
-        lambda: nnf.LiteralNode('L1', 1, negated=True),
-        torch.tensor([[0.], [1.]]),
-        torch.tensor([[-1.], [-1.]])
-    ),
-    (
-        "Simple AND with Negation: ¬x₁ ∧ x₂",
-        lambda: nnf.AndNode('A1', [nnf.LiteralNode('L1', 1, negated=True), nnf.LiteralNode('L2', 2)]),
-        torch.tensor([[0., 0.], [0., 1.], [1., 0.], [1., 1.]]),
-        torch.tensor([[0., 1.], [-1., 1.], [0., 0.], [-1., 0.]])
-    ),
-    (
-        "Complex Circuit 1: (¬x₁ ∧ x₂) V x₃",
-        lambda: nnf.OrNode('O1', [
-            nnf.AndNode('A1', [nnf.LiteralNode('L1', 1, negated=True), nnf.LiteralNode('L2', 2)]), 
-            nnf.LiteralNode('L3', 3)
+        os.path.join(circuit_dir, "simple_or.sdd"),
+        os.path.join(circuit_dir, "simple_or.json"),
+        torch.tensor([
+            [1., 0., 1., 0.],  # x1=1, ¬x1=0, x2=1, ¬x2=0 -> 1 OR 1 = 2
+            [1., 0., 0., 1.],  # x1=1, ¬x1=0, x2=0, ¬x2=1 -> 1 OR 0 = 1
+            [0., 1., 1., 0.],  # x1=0, ¬x1=1, x2=1, ¬x2=0 -> 0 OR 1 = 1
+            [0., 1., 0., 1.]   # x1=0, ¬x1=1, x2=0, ¬x2=1 -> 0 OR 0 = 0
         ]),
-        torch.tensor([[0., 1., 0.], [1., 1., 0.], [0., 0., 1.], [1., 0., 1.]]),
-        torch.tensor([[-1., 1., 1.], [-1., 0., 1.], [ 0., 1., 1.], [ 0., 0., 1.]])
+        torch.tensor([
+            [1., 0., 1., 0.],  # ∂f/∂x1=1, ∂f/∂¬x1=0, ∂f/∂x2=1, ∂f/∂¬x2=0
+            [1., 0., 1., 0.],  # ∂f/∂x1=1, ∂f/∂¬x1=0, ∂f/∂x2=1, ∂f/∂¬x2=0
+            [1., 0., 1., 0.],  # ∂f/∂x1=1, ∂f/∂¬x1=0, ∂f/∂x2=1, ∂f/∂¬x2=0
+            [1., 0., 1., 0.]   # ∂f/∂x1=1, ∂f/∂¬x1=0, ∂f/∂x2=1, ∂f/∂¬x2=0
+        ])
     ),
     (
-        "Complex Circuit 2: (x₀ ∧ x₁) V (x₂ ∧ ¬x₃)",
-        lambda: nnf.OrNode("6", [
-            nnf.AndNode("4", [nnf.LiteralNode("0", 1), nnf.LiteralNode("1", 2)]),
-            nnf.AndNode("5", [nnf.LiteralNode("2", 3), nnf.LiteralNode("3", 4, negated=True)])
+        "Memoization Test 1: (x₁ V x₂) ∧ (x₁ V x₂) - shared subexpressions",
+        os.path.join(circuit_dir, "memoization_test.sdd"),
+        os.path.join(circuit_dir, "memoization_test.json"),
+        torch.tensor([
+            [1., 0., 1., 0.],  # (1 OR 1) AND (1 OR 1) = 2 AND 2 = 4
+            [1., 0., 0., 1.],  # (1 OR 0) AND (1 OR 0) = 1 AND 1 = 1
+            [0., 1., 1., 0.],  # (0 OR 1) AND (0 OR 1) = 1 AND 1 = 1
+            [0., 1., 0., 1.]   # (0 OR 0) AND (0 OR 0) = 0 AND 0 = 0
         ]),
-        torch.tensor([[1., 1., 0., 0.], [0., 1., 1., 1.], [1., 0., 1., 0.]]),
-        torch.tensor([[1., 1., 1., -0.], [1., 0., 0., -1.], [0., 1., 1., -1.]])
-    )
+        torch.tensor([
+            [4., 0., 4., 0.],  # ∂f/∂x1=4, ∂f/∂¬x1=0, ∂f/∂x2=4, ∂f/∂¬x2=0
+            [2., 0., 2., 0.],  # ∂f/∂x1=2, ∂f/∂¬x1=0, ∂f/∂x2=2, ∂f/∂¬x2=0
+            [2., 0., 2., 0.],  # ∂f/∂x1=2, ∂f/∂¬x1=0, ∂f/∂x2=2, ∂f/∂¬x2=0
+            [0., 0., 0., 0.]   # ∂f/∂x1=0, ∂f/∂¬x1=0, ∂f/∂x2=0, ∂f/∂¬x2=0
+        ])
+    ),
+    (
+        "Memoization Test 2: ((x₁ ∧ x₂) V x₃) ∧ ((x₁ ∧ x₂) V x₄) - shared subexpressions",
+        os.path.join(circuit_dir, "memoization_test2.sdd"),
+        os.path.join(circuit_dir, "memoization_test2.json"),
+        torch.tensor([
+            [1., 0., 1., 0., 0., 1., 0., 1.],  # ((1 AND 1) OR 0) AND ((1 AND 1) OR 0) = 1 AND 1 = 1
+            [1., 0., 0., 1., 1., 0., 1., 0.],  # ((1 AND 0) OR 1) AND ((1 AND 0) OR 1) = 1 AND 1 = 1
+            [0., 1., 1., 0., 1., 0., 1., 0.],  # ((0 AND 1) OR 1) AND ((0 AND 1) OR 1) = 1 AND 1 = 1
+        ]),
+        torch.tensor([
+            [2., 0., 2., 0., 1., 0., 1., 0.],  # ∂f/∂x1=2, ∂f/∂¬x1=0, ∂f/∂x2=2, ∂f/∂¬x2=0, ∂f/∂x3=1, ∂f/∂¬x3=0, ∂f/∂x4=1, ∂f/∂¬x4=0
+            [0., 0., 2., 0., 1., 0., 1., 0.],  # ∂f/∂x1=0, ∂f/∂¬x1=0, ∂f/∂x2=2, ∂f/∂¬x2=0, ∂f/∂x3=1, ∂f/∂¬x3=0, ∂f/∂x4=1, ∂f/∂¬x4=0
+            [2., 0., 0., 0., 1., 0., 1., 0.],  # ∂f/∂x1=2, ∂f/∂¬x1=0, ∂f/∂x2=0, ∂f/∂¬x2=0, ∂f/∂x3=1, ∂f/∂¬x3=0, ∂f/∂x4=1, ∂f/∂¬x4=0
+        ])
+    ),
 ]
-
-# --- Test Cases for Boolean Backward Pass with Shared Subexpressions ---
-# Each tuple: (description, nnf_circuit, input_data, expected_gradients)
-
-shared_subexpression_test_cases = [
-    (
-        "Boolean Circuit with Shared OR: (x₁ V x₂) ∧ (x₁ V x₂)",
-        # f = (x₁ + x₂) * (x₁ + x₂) = (x₁ + x₂)²
-        # ∂f/∂x₁ = 2(x₁ + x₂), ∂f/∂x₂ = 2(x₁ + x₂)
-        lambda: nnf.AndNode('A1', [
-            nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
-            nnf.OrNode('O1', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)])
-        ]),
-        torch.tensor([[0., 0.], [0., 1.], [1., 0.], [1., 1.]]),
-        torch.tensor([[0., 0.], [2., 2.], [2., 2.], [4., 4.]])
-    ),
-    (
-        "Boolean Circuit with Shared AND: ((x₁ ∧ x₂) V x₃) ∧ ((x₁ ∧ x₂) V x₄)",
-        # f = ((x₁ * x₂) + x₃) * ((x₁ * x₂) + x₄)
-        # ∂f/∂x₁ = x₂ * ((x₁ * x₂) + x₄) + x₂ * ((x₁ * x₂) + x₃)
-        # ∂f/∂x₂ = x₁ * ((x₁ * x₂) + x₄) + x₁ * ((x₁ * x₂) + x₃)
-        # ∂f/∂x₃ = (x₁ * x₂) + x₄
-        # ∂f/∂x₄ = (x₁ * x₂) + x₃
-        lambda: nnf.AndNode('A1', [
-            nnf.OrNode('O1', [
-                nnf.AndNode('A2', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
-                nnf.LiteralNode('L3', 3)
-            ]),
-            nnf.OrNode('O2', [
-                nnf.AndNode('A2', [nnf.LiteralNode('L1', 1), nnf.LiteralNode('L2', 2)]),
-                nnf.LiteralNode('L6', 4)
-            ])
-        ]),
-        torch.tensor([[1., 1., 0., 0.], [1., 0., 1., 1.], [0., 1., 1., 1.], [1., 1., 1., 1.], [0., 0., 0., 0.], [1., 0., 0., 1.]]),
-        torch.tensor([[2., 2., 1., 1.], [0., 2., 1., 1.], [2., 0., 1., 1.], [4., 4., 2., 2.], [0., 0., 0., 0.], [0., 1., 1., 0.]])
-    )
-]
-
-test_cases = test_cases + shared_subexpression_test_cases
 
 @pytest.mark.parametrize("implementation", implementations, ids=[i['name'] for i in implementations])
-@pytest.mark.parametrize("description, nnf_circuit, input_data, expected_gradients", test_cases)
-def test_circuit_derivatives_boolean(implementation, description, nnf_circuit, input_data, expected_gradients):
+@pytest.mark.parametrize("description, sdd_file, json_file, input_data, expected_gradients", test_cases)
+def test_circuit_derivatives_boolean(implementation, description, sdd_file, json_file, input_data, expected_gradients):
     """
     Tests that computed gradients match analytical derivatives for various circuits and implementations
-    using boolean inputs.
+    using logic variables.
     """
     full_description = f"{description} ({implementation['name']} Implementation)"
     print(f"Testing circuit: {full_description}")
-    
-    root_node = nnf_circuit()
 
     implementation_class = implementation["implementation_class"]
-    computed_gradients = calculate_individual_gradients(root_node, input_data.clone(), implementation_class)
+    computed_gradients = calculate_individual_gradients(sdd_file, json_file, input_data.clone(), implementation_class)
 
     torch.testing.assert_close(
         computed_gradients,

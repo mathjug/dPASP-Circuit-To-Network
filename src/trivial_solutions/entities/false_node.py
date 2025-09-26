@@ -11,13 +11,12 @@ class FalseNode(nn.Module):
     def __str__(self):
         return 'FALSE'
 
-    def forward(self, x, marginalized_variables = None, memoization_cache = None):
+    def forward(self, x, memoization_cache = None):
         """
         Returns a tensor of zeros with a shape of (batch_size, 1).
 
         Args:
-            x (torch.Tensor): The input tensor, used to determine batch size,
-                              device, and dtype.
+            x (torch.Tensor): The input tensor.
         """
         batch_size = 1 if x.dim() == 1 else x.shape[0]
-        return torch.zeros((batch_size, 1), device=x.device, dtype=x.dtype)
+        return torch.zeros((batch_size, 1), device=x.device, dtype=torch.float32)
