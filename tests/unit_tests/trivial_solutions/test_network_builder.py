@@ -13,8 +13,11 @@ the resulting neural network contains the expected number of unique modules.
 import pytest
 import os
 
-from src.trivial_solutions.recursive_neural_network import RecursiveNN
-from src.trivial_solutions.iterative_neural_network import IterativeNN
+from src.trivial_solutions.network_builder import NetworkBuilder
+from src.trivial_solutions.entities.or_node import RecursiveORNode
+from src.trivial_solutions.entities.and_node import RecursiveANDNode
+from src.trivial_solutions.entities.or_node import IterativeORNode
+from src.trivial_solutions.entities.and_node import IterativeANDNode
 from tests.utils.utils import count_unique_nodes
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
@@ -30,6 +33,7 @@ network_construction_test_cases = [
             'ANDNode': 1,
             'ORNode': 1
         },
+        False,
     ),
     (
         "Simple OR: x₁ V x₂",
@@ -41,31 +45,34 @@ network_construction_test_cases = [
             'ANDNode': 2,
             'TrueNode': 1
         },
+        False,
     ),
     (
         "Memoization Test 1: (x₁ V x₂) ∧ (x₁ V x₂) - shared subexpressions",
         os.path.join(circuit_dir, "memoization_test.sdd"),
         os.path.join(circuit_dir, "memoization_test.json"),
         {
-            'LiteralNodeModule': 2, # x1 and x2 should be shared
-            'ORNode': 2,            # Two OR nodes
-            'ANDNode': 3,           # Three AND nodes
+            'LiteralNodeModule': 2,
+            'ORNode': 2,
+            'ANDNode': 3,
             'TrueNode': 1
         },
+        False,
     ),
     (
         "Memoization Test 2: ((x₁ ∧ x₂) V x₃) ∧ ((x₁ ∧ x₂) V x₄) - shared subexpressions",
         os.path.join(circuit_dir, "memoization_test2.sdd"),
         os.path.join(circuit_dir, "memoization_test2.json"),
         {
-            'LiteralNodeModule': 4, # x1, x2, x3, x4
-            'ANDNode': 5,           # Five AND nodes
-            'ORNode': 4,            # Four OR nodes
+            'LiteralNodeModule': 4,
+            'ANDNode': 5,
+            'ORNode': 4,
             'TrueNode': 1
         },
+        False,
     ),
     (
-        "Simple AND NOT: x₁ ∧ ¬x₂",
+        "[Probabilistic] Simple AND NOT: x₁ ∧ ¬x₂",
         os.path.join(circuit_dir, "simple_and_not.sdd"),
         os.path.join(circuit_dir, "simple_and_not.json"),
         {
@@ -74,46 +81,117 @@ network_construction_test_cases = [
             'ORNode': 1 + 1,
             'ConstantNode': 4
         },
+        False,
     ),
     (
-        "Complex Shared AND: (x₁ ∧ x₂) V (x₁ ∧ x₂) V (x₃ ∧ x₄) - shared subexpressions",
+        "[Probabilistic] Complex Shared AND: (x₁ ∧ x₂) V (x₁ ∧ x₂) V (x₃ ∧ x₄) - shared subexpressions",
         os.path.join(circuit_dir, "complex_shared_and.sdd"),
         os.path.join(circuit_dir, "complex_shared_and.json"),
         {
-            'LiteralNodeModule': 4,  # x1, x2, x3, x4
-            'ANDNode': 4 + 4,        # Eight AND nodes
-            'ORNode': 3,             # Three OR nodes
-            'ConstantNode': 4,       # Four constant nodes
+            'LiteralNodeModule': 4,
+            'ANDNode': 4 + 4,
+            'ORNode': 3,
+            'ConstantNode': 4,
             'TrueNode': 1
         },
+        False,
     ),
     (
-        "Deep Nested Shared: ((x₁ V x₂) ∧ x₃) V ((x₁ V x₂) ∧ x₄) V ((x₁ V x₂) ∧ x₅) - shared subexpressions",
+        "[Probabilistic] Deep Nested Shared: ((x₁ V x₂) ∧ x₃) V ((x₁ V x₂) ∧ x₄) V ((x₁ V x₂) ∧ x₅) - shared subexpressions",
         os.path.join(circuit_dir, "deep_nested_shared.sdd"),
         os.path.join(circuit_dir, "deep_nested_shared.json"),
         {
-            'LiteralNodeModule': 5,  # x1, x2, x3, x4, x5
-            'ANDNode': 8 + 5,        # Thirteen AND nodes
-            'ORNode': 5,             # Five OR nodes
-            'ConstantNode': 5,       # Five constant nodes
+            'LiteralNodeModule': 5,
+            'ANDNode': 8 + 5,
+            'ORNode': 5,
+            'ConstantNode': 5,
             'TrueNode': 1
         },
+        False,
+    ),
+    (
+        "[Simplified] Simple OR: x₁ V x₂",
+        os.path.join(circuit_dir, "simple_or.sdd"),
+        os.path.join(circuit_dir, "simple_or.json"),
+        {
+            'LiteralNodeModule': 2,
+            'ORNode': 1
+        },
+        True,
+    ),
+    (
+        "[Simplified] Memoization Test 1: (x₁ V x₂) ∧ (x₁ V x₂) - shared subexpressions",
+        os.path.join(circuit_dir, "memoization_test.sdd"),
+        os.path.join(circuit_dir, "memoization_test.json"),
+        {
+            'LiteralNodeModule': 2,
+            'ORNode': 1,
+            'ANDNode': 1
+        },
+        True,
+    ),
+    (
+        "[Simplified] Memoization Test 2: ((x₁ ∧ x₂) V x₃) ∧ ((x₁ ∧ x₂) V x₄) - shared subexpressions",
+        os.path.join(circuit_dir, "memoization_test2.sdd"),
+        os.path.join(circuit_dir, "memoization_test2.json"),
+        {
+            'LiteralNodeModule': 4,
+            'ANDNode': 2,
+            'ORNode': 2,
+        },
+        True,
+    ),
+    (
+        "[Simplified][Probabilistic] Simple AND NOT: x₁ ∧ ¬x₂",
+        os.path.join(circuit_dir, "simple_and_not.sdd"),
+        os.path.join(circuit_dir, "simple_and_not.json"),
+        {
+            'LiteralNodeModule': 2,
+            'ANDNode': 1 + 3,
+            'ORNode': 1,
+            'ConstantNode': 4
+        },
+        True,
+    ),
+    (
+        "[Simplified][Probabilistic] Complex Shared AND: (x₁ ∧ x₂) V (x₁ ∧ x₂) V (x₃ ∧ x₄) - shared subexpressions",
+        os.path.join(circuit_dir, "complex_shared_and.sdd"),
+        os.path.join(circuit_dir, "complex_shared_and.json"),
+        {
+            'LiteralNodeModule': 4,
+            'ANDNode': 2 + 4,
+            'ORNode': 1,
+            'ConstantNode': 4,
+        },
+        True,
+    ),
+    (
+        "[Simplified][Probabilistic] Deep Nested Shared: ((x₁ V x₂) ∧ x₃) V ((x₁ V x₂) ∧ x₄) V ((x₁ V x₂) ∧ x₅) - shared subexpressions",
+        os.path.join(circuit_dir, "deep_nested_shared.sdd"),
+        os.path.join(circuit_dir, "deep_nested_shared.json"),
+        {
+            'LiteralNodeModule': 5,
+            'ANDNode': 3 + 5,
+            'ORNode': 2,
+            'ConstantNode': 5,
+        },
+        True,
     )
 ]
 
-@pytest.mark.parametrize("implementation_class", [RecursiveNN, IterativeNN], ids=["Recursive", "Iterative"])
-@pytest.mark.parametrize("description, sdd_file, json_file, expected_counts", network_construction_test_cases)
-def test_network_builder_no_duplicates(implementation_class, description, sdd_file, json_file, expected_counts):
+@pytest.mark.parametrize("node_type", [(RecursiveORNode, RecursiveANDNode), (IterativeORNode, IterativeANDNode)], ids=["Recursive", "Iterative"])
+@pytest.mark.parametrize("description, sdd_file, json_file, expected_counts, should_simplify", network_construction_test_cases)
+def test_network_builder_no_duplicates(node_type, description, sdd_file, json_file, expected_counts, should_simplify):
     """
     Tests that NetworkBuilder constructs networks without duplicate nodes when the same NNF node
     appears multiple times in the circuit.
     """
-    implementation_name = "Recursive" if implementation_class == RecursiveNN else "Iterative"
+    implementation_name = "Recursive" if node_type[0] == RecursiveORNode else "Iterative"
     full_description = f"{description} ({implementation_name} Implementation)"
     print(f"Testing network builder: {full_description}")
 
-    neural_network = implementation_class(sdd_file, json_file)
-    actual_counts = count_unique_nodes(neural_network.root)
+    neural_network_root = NetworkBuilder(node_type[0], node_type[1]).build_network(sdd_file, json_file, should_simplify)
+    actual_counts = count_unique_nodes(neural_network_root)
     
     assert actual_counts == expected_counts, (
         f"Module count mismatch for {full_description}\n"
@@ -128,9 +206,9 @@ def test_network_builder_node_caching():
     sdd_file = os.path.join(circuit_dir, "memoization_test.sdd")
     json_file = os.path.join(circuit_dir, "memoization_test.json")
     
-    nn1 = RecursiveNN(sdd_file, json_file)
-    nn2 = RecursiveNN(sdd_file, json_file)
-    counts1 = count_unique_nodes(nn1.root)
-    counts2 = count_unique_nodes(nn2.root)
+    nn1 = NetworkBuilder(RecursiveORNode, RecursiveANDNode).build_network(sdd_file, json_file, False)
+    nn2 = NetworkBuilder(RecursiveORNode, RecursiveANDNode).build_network(sdd_file, json_file, False)
+    counts1 = count_unique_nodes(nn1)
+    counts2 = count_unique_nodes(nn2)
     
     assert counts1 == counts2, "Different network instances should have the same structure"

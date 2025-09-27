@@ -25,26 +25,30 @@ class NetworkBuilder:
         self.or_node_class = or_node_class
         self.and_node_class = and_node_class
     
-    def build_network(self, sdd_file, json_file):
+    def build_network(self, sdd_file, json_file, should_simplify=True):
+        """
+        Builds the neural network from the given SDD file and JSON file.
+        
+        Args:
+            sdd_file (string): The path to the SDD file
+            json_file (string): The path to the JSON file
+            should_simplify (bool): Whether to simplify the network by removing unnecessary nodes
+        
+        Returns:
+            The instantiated neural network
+        """
         nnf_root = NNFParser().parse(sdd_file)
         self.literal_to_prob_node = self._build_literal_to_prob_node_mapping(json_file)
-        return self._recursive_build_network(nnf_root, {})
+        return self._recursive_build_network(nnf_root, {}, should_simplify)
     
     def _build_literal_to_prob_node_mapping(self, json_file):
         probabilities_parser = ProbabilitiesParser(json_file)
         literal_to_prob = probabilities_parser.variable_to_prob
         return {literal: ConstantNode(prob) for literal, prob in literal_to_prob.items()}
     
-    def _recursive_build_network(self, node, node_cache):
+    def _recursive_build_network(self, node, node_cache, should_simplify):
         """
         Builds the neural network recursively, caching nodes by their ID to avoid duplicates.
-        
-        Args:
-            node: The NNF node to convert
-            node_cache: Dictionary mapping node IDs to already instantiated nodes
-            
-        Returns:
-            The instantiated neural network node
         """
         if node.id in node_cache:
             return node_cache[node.id]
@@ -56,11 +60,11 @@ class NetworkBuilder:
         elif isinstance(node, nnf.FalseNode):
             nn_node = FalseNode()
         elif isinstance(node, nnf.AndNode):
-            children_nodes = [self._recursive_build_network(child, node_cache) for child in node.children]
-            nn_node = self.and_node_class(children_nodes, node_id=node.id)
+            children_nodes = [self._recursive_build_network(child, node_cache, should_simplify) for child in node.children]
+            nn_node = self._create_and_node(node.id, children_nodes, should_simplify)
         elif isinstance(node, nnf.OrNode):
-            children_nodes = [self._recursive_build_network(child, node_cache) for child in node.children]
-            nn_node = self.or_node_class(children_nodes, node_id=node.id)
+            children_nodes = [self._recursive_build_network(child, node_cache, should_simplify) for child in node.children]
+            nn_node = self._create_or_node(node.id, children_nodes, should_simplify)
         else:
             raise ValueError(f"Unknown node type: {type(node)}")
         
@@ -81,3 +85,33 @@ class NetworkBuilder:
         and_node = self.and_node_class([probability_node, ConstantNode(-1.0)])
         or_node = self.or_node_class([and_node, ConstantNode(1.0)])
         return self.and_node_class([or_node, literal_node], node_id=node_id)
+    
+    def _create_and_node(self, node_id, children_nodes, should_simplify):
+        if not should_simplify:
+            return self.and_node_class(children_nodes, node_id=node_id)
+        simplified_children = []
+        for child in children_nodes:
+            if isinstance(child, FalseNode):
+                return child
+            if not isinstance(child, TrueNode):
+                simplified_children.append(child)
+        if not simplified_children:
+            return TrueNode()
+        if len(simplified_children) == 1:
+            return simplified_children[0]
+        return self.and_node_class(simplified_children, node_id=node_id)
+    
+    def _create_or_node(self, node_id, children_nodes, should_simplify):
+        if not should_simplify:
+            return self.or_node_class(children_nodes, node_id=node_id)
+        simplified_children = []
+        for child in children_nodes:
+            if isinstance(child, TrueNode):
+                return child
+            if not isinstance(child, FalseNode):
+                simplified_children.append(child)
+        if not simplified_children:
+            return FalseNode()
+        if len(simplified_children) == 1:
+            return simplified_children[0]
+        return self.or_node_class(simplified_children, node_id=node_id)
