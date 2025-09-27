@@ -7,6 +7,7 @@ class LiteralNodeModule(nn.Module):
         self.literal_index = literal_index # 1-indexed
         self.input_index = input_index # 0-indexed
         self.negated = negated
+        self.descendant_variables = set([literal_index])
     
     def __str__(self):
         return f"{'¬' if self.negated else ''}x{self.literal_index}"

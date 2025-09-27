@@ -7,6 +7,7 @@ class FalseNode(nn.Module):
     """
     def __init__(self):
         super().__init__()
+        self.descendant_variables = set()
 
     def __str__(self):
         return 'FALSE'

@@ -8,6 +8,7 @@ class ConstantNode(nn.Module):
     def __init__(self, constant: float):
         super().__init__()
         self.constant = constant
+        self.descendant_variables = set()
     
     def __str__(self):
         return f'CONSTANT {self.constant}'
