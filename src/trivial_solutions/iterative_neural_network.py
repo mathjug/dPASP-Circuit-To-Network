@@ -9,10 +9,10 @@ class IterativeNN(nn.Module):
     """
     Neural Network representation of a NNF, with a bottom-up, iterative forward pass.
     """
-    def __init__(self, sdd_file, json_file, should_simplify=True):
+    def __init__(self, sdd_file, json_file, should_simplify=True, make_smooth=True):
         super().__init__()
         network_builder = NetworkBuilder(ORNode, ANDNode)
-        self.root = network_builder.build_network(sdd_file, json_file, should_simplify)
+        self.root = network_builder.build_network(sdd_file, json_file, should_simplify, make_smooth)
         self.execution_order = self._topological_sort()
 
     def _topological_sort(self):

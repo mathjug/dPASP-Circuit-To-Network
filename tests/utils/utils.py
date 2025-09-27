@@ -22,7 +22,7 @@ def calculate_individual_gradients(sdd_file, json_file, input_tensor, nn_impleme
         torch.Tensor: A tensor of the same shape as input_tensor, containing the gradients.
     """
     input_tensor.requires_grad_(True)
-    neural_network = nn_implementation(sdd_file, json_file)
+    neural_network = nn_implementation(sdd_file, json_file, make_smooth=False)
     output = neural_network.forward(input_tensor)
     
     batch_size = input_tensor.shape[0]

@@ -89,7 +89,7 @@ def test_forward_pass_boolean(implementation, description, sdd_file, json_file, 
     print(f"Testing boolean forward pass: {full_description}")
 
     implementation_class = implementation["implementation_class"]
-    neural_network = implementation_class(sdd_file, json_file)
+    neural_network = implementation_class(sdd_file, json_file, make_smooth=False)
 
     computed_output = neural_network.forward(input_data)
 

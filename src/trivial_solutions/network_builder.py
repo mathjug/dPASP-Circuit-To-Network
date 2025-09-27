@@ -25,7 +25,7 @@ class NetworkBuilder:
         self.or_node_class = or_node_class
         self.and_node_class = and_node_class
     
-    def build_network(self, sdd_file, json_file, should_simplify=True):
+    def build_network(self, sdd_file, json_file, should_simplify=True, make_smooth=True):
         """
         Builds the neural network from the given SDD file and JSON file.
         
@@ -33,13 +33,18 @@ class NetworkBuilder:
             sdd_file (string): The path to the SDD file
             json_file (string): The path to the JSON file
             should_simplify (bool): Whether to simplify the network by removing unnecessary nodes
+            make_smooth (bool): Whether to transform the network to make it represent a smooth circuit
         
         Returns:
             The instantiated neural network
         """
         nnf_root = NNFParser().parse(sdd_file)
         self.literal_to_prob_node = self._build_literal_to_prob_node_mapping(json_file)
-        return self._recursive_build_network(nnf_root, {}, should_simplify)
+        self.literal_to_literal_node = {}
+        nn_root = self._recursive_build_network(nnf_root, {}, should_simplify)
+        if make_smooth:
+            nn_root = self._enforce_circuit_smoothness(nn_root)
+        return nn_root
     
     def _build_literal_to_prob_node_mapping(self, json_file):
         probabilities_parser = ProbabilitiesParser(json_file)
@@ -72,14 +77,21 @@ class NetworkBuilder:
         return nn_node
 
     def _create_literal_node(self, node):
+        if (node.literal, node.negated) in self.literal_to_literal_node:
+            return self.literal_to_literal_node[(node.literal, node.negated)]
         input_index = 2 * (node.literal - 1) + int(node.negated)
         literal_node = LiteralNodeModule(node.literal, input_index, node.negated)
         if node.literal not in self.literal_to_prob_node:
+            self.literal_to_literal_node[(node.literal, node.negated)] = literal_node
             return literal_node
         probability_node = self.literal_to_prob_node[node.literal]
         if node.negated:
-            return self._create_negated_literal_node(node.id, literal_node, probability_node)
-        return self.and_node_class([literal_node, probability_node], node_id=node.id)
+            negated_literal_node = self._create_negated_literal_node(node.id, literal_node, probability_node)
+            self.literal_to_literal_node[(node.literal, True)] = negated_literal_node
+            return negated_literal_node
+        positive_literal_node = self.and_node_class([literal_node, probability_node], node_id=node.id)
+        self.literal_to_literal_node[(node.literal, False)] = positive_literal_node
+        return positive_literal_node
     
     def _create_negated_literal_node(self, node_id, literal_node, probability_node):
         and_node = self.and_node_class([probability_node, ConstantNode(-1.0)])
@@ -115,3 +127,43 @@ class NetworkBuilder:
         if len(simplified_children) == 1:
             return simplified_children[0]
         return self.or_node_class(simplified_children, node_id=node_id)
+    
+    def _enforce_circuit_smoothness(self, nn_root):
+        """
+        Enforces the smoothness of the circuit.
+        """
+        if isinstance(nn_root, self.or_node_class):
+            self._enforce_circuit_smoothness_or_node(nn_root)
+        if hasattr(nn_root, 'children_nodes'):
+            for child in nn_root.children_nodes:
+                self._enforce_circuit_smoothness(child)
+    
+    def _enforce_circuit_smoothness_or_node(self, or_node):
+        """
+        Enforces the smoothness of the OR node.
+        """
+        if len(or_node.children_nodes) < 2:
+            return
+        parent_variables = or_node.descendant_variables
+        for i, child in enumerate(or_node.children_nodes):
+            child_variables = child.descendant_variables
+            missing_variables = parent_variables - child_variables
+            if not missing_variables:
+                continue
+            new_child = child
+            if not isinstance(child, self.and_node_class):
+                new_child = self.and_node_class([child])
+                or_node.children_nodes[i] = new_child
+            for missing_var in missing_variables:
+                tautology_node = self._create_tautology_node(missing_var)
+                new_child.children_nodes.append(tautology_node)
+    
+    def _create_tautology_node(self, variable):
+        """
+        Creates a tautology node.
+        """
+        input_index = 2 * (variable - 1)
+        negative_literal = self.literal_to_literal_node.get((variable, True), LiteralNodeModule(variable, input_index + 1, True))
+        positive_literal = self.literal_to_literal_node.get((variable, False), LiteralNodeModule(variable, input_index, False))
+        children_nodes = [negative_literal, positive_literal]
+        return self.or_node_class(children_nodes)
