@@ -43,7 +43,7 @@ class NetworkBuilder:
         self.literal_to_literal_node = {}
         nn_root = self._recursive_build_network(nnf_root, {}, should_simplify)
         if make_smooth:
-            nn_root = self._enforce_circuit_smoothness(nn_root)
+            self._enforce_circuit_smoothness(nn_root)
         return nn_root
     
     def _build_literal_to_prob_node_mapping(self, json_file):
