@@ -15,6 +15,7 @@ import torch
 import pytest
 import os
 from src.queries.query_executor import QueryExecutor
+from tests.utils.utils import implementations
 
 @pytest.fixture
 def alarm_files():
@@ -23,8 +24,7 @@ def alarm_files():
     examples_dir = os.path.join(current_dir, "..", "..", "examples", "alarm")
     sdd_file = os.path.join(examples_dir, "alarm_balanced.sdd")
     json_file = os.path.join(examples_dir, "alarm.json")
-    vtree_file = os.path.join(examples_dir, "alarm_balanced.vtree")
-    return sdd_file, json_file, vtree_file
+    return sdd_file, json_file
 
 # Test cases for alarm queries
 # Each tuple: (description, query_variable, evidence_variables, expected_output)
@@ -56,14 +56,14 @@ calls_test_cases = [
 
 all_test_cases = alarm_test_cases + calls_test_cases
 
+@pytest.mark.parametrize("implementation", implementations, ids=[i['name'] for i in implementations])
 @pytest.mark.parametrize("description, query_variable, evidence_variables, expected_output", all_test_cases)
-def test_query_executor_integration(alarm_files, description, query_variable, evidence_variables, expected_output):
+def test_query_executor_integration(alarm_files, implementation, description, query_variable, evidence_variables, expected_output):
     """
     Tests the QueryExecutor integration with various query and evidence combinations.
     """
-    sdd_file, json_file, vtree_file = alarm_files
-    
-    executor = QueryExecutor(sdd_file, json_file, vtree_file)
+    sdd_file, json_file = alarm_files
+    executor = QueryExecutor(sdd_file, json_file, implementation["implementation_class"])
     result = executor.execute_query(query_variable=query_variable, evidence_variables=evidence_variables)
     
     torch.testing.assert_close(

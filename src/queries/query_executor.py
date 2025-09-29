@@ -1,9 +1,4 @@
 import torch
-from array import array
-from pathlib import Path
-from pysdd.sdd import SddManager, Vtree
-
-from src.parser.probabilities_parser import ProbabilitiesParser
 
 class QueryExecutor:
     """
@@ -17,19 +12,17 @@ class QueryExecutor:
         num_variables (int): The number of variables in the NNF circuit.
     """
     
-    def __init__(self, sdd_file, json_file, vtree_file):
+    def __init__(self, sdd_file, json_file, nn_implementation):
         """
         Initializes the QueryExecutor.
 
         Args:
             sdd_file (string): The `.sdd` file with the definition of the NNF circuit.
             json_file (string): The `.json` file with the probabilities of each variable.
-            vtree_file (string): The `.vtree` file with the structure of the Vtree.
+            nn_implementation (nn.Module): The implementation (IterativeNN or RecursiveNN) of the neural network.
         """
-        self.circuit_root = self._get_circuit_root(sdd_file, vtree_file)
-        prob_parser = ProbabilitiesParser(json_file)
-        self.variable_to_prob = prob_parser.variable_to_prob
-        self.num_variables = len(prob_parser.variable_to_atom)
+        self.neural_network = nn_implementation(sdd_file, json_file)
+        self.num_variables = self.neural_network.num_variables
     
     def execute_query(self, query_variable, evidence_variables = []):
         """
@@ -47,64 +40,37 @@ class QueryExecutor:
             evidence_variables if evidence_variables is not None else []
         )
 
-        # Weighted Model Counting
-        wmc = self.circuit_root.wmc(log_mode=False)
-
         # 1. Calculate the numerator: P(query=1, evidence=1)
-        wmc.set_literal_weights_from_array(numerator_input)
-        numerator_prob = wmc.propagate()
+        numerator_prob = self.neural_network.forward(numerator_input)
 
         # 2. Calculate the denominator: P(evidence=1)
-        wmc.set_literal_weights_from_array(denominator_input)
-        denominator_prob = wmc.propagate()
+        denominator_prob = self.neural_network.forward(denominator_input)
 
         # 3. Compute conditional probability
-        if denominator_prob == 0:
-            return 0.0        
-        return numerator_prob / denominator_prob
-    
-    def _get_circuit_root(self, sdd_file, vtree_file):
-        """
-        Gets the root node of the circuit.
-        """
-        current_dir = Path(__file__).parent.parent.parent
-        vtree = Vtree.from_file(bytes(current_dir / vtree_file))
-        sdd = SddManager.from_vtree(vtree)
-        root = sdd.read_sdd_file(bytes(current_dir / sdd_file))
-        return root
+        if float(denominator_prob) == 0.:
+            return 0.
+        return float(numerator_prob / denominator_prob)
     
     def _build_input_tensors(self, query_variable, evidence_variables):
         """
         Builds the input tensors for the numerator and denominator of the conditional probability.
-        The input tensor is indexed as [-n, -(n-1), ..., -1, 1, 2, ..., n] for n variables.
+        The input tensor is indexed as [1, -1, 2, -2, ..., n, -n] for n variables.
         """
-        numerator_input = self._initialize_input_tensor()
-        denominator_input = self._initialize_input_tensor()
+        numerator_input = torch.ones(self.num_variables * 2, dtype=torch.float32)
+        denominator_input = torch.ones(self.num_variables * 2, dtype=torch.float32)
 
         neg_index, pos_index = self._get_indexes_of_literals(query_variable)
         numerator_input[neg_index] = 0.
-        numerator_input[pos_index] = self._get_positive_literal_input_value(query_variable)
+        numerator_input[pos_index] = 1.
 
         for evidence_variable in evidence_variables:
             neg_index, pos_index = self._get_indexes_of_literals(evidence_variable)
             numerator_input[neg_index] = 0.
-            numerator_input[pos_index] = self._get_positive_literal_input_value(evidence_variable)
+            numerator_input[pos_index] = 1.
             denominator_input[neg_index] = 0.
-            denominator_input[pos_index] = self._get_positive_literal_input_value(evidence_variable)
+            denominator_input[pos_index] = 1.
         
-        return array('d', numerator_input), array('d', denominator_input)
-    
-    def _initialize_input_tensor(self):
-        """
-        Initializes the input tensor for the numerator and denominator of the conditional probability.
-        The array is indexed as [-n, -(n-1), ..., -1, 1, 2, ..., n] for n variables.
-        """
-        input_tensor = torch.ones(self.num_variables * 2, dtype=torch.float32)
-        for variable, prob in self.variable_to_prob.items():
-            neg_index, pos_index = self._get_indexes_of_literals(variable)
-            input_tensor[neg_index] = 1 - prob
-            input_tensor[pos_index] = prob
-        return input_tensor
+        return numerator_input, denominator_input
     
     def _get_indexes_of_literals(self, variable):
         """
@@ -112,14 +78,6 @@ class QueryExecutor:
         """
         if variable < 1 or variable > self.num_variables:
             raise ValueError(f"Variable (X_{variable}) out of bounds for tensor of size {self.num_variables}.")
-        neg_index = self.num_variables - variable
-        pos_index = self.num_variables + variable - 1
+        neg_index = 2 * (variable - 1) + 1
+        pos_index = 2 * (variable - 1)
         return neg_index, pos_index
-    
-    def _get_positive_literal_input_value(self, variable):
-        """
-        Gets the input value for the positive literal of a variable.
-        """
-        if variable not in self.variable_to_prob:
-            return 1.
-        return self.variable_to_prob[variable]

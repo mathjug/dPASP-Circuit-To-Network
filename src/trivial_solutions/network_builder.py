@@ -37,19 +37,21 @@ class NetworkBuilder:
         
         Returns:
             The instantiated neural network
+            The number of variables in the network
         """
         nnf_root = NNFParser().parse(sdd_file)
-        self.literal_to_prob_node = self._build_literal_to_prob_node_mapping(json_file)
+        self.literal_to_prob_node, num_variables = self._build_literal_to_prob_node_mapping(json_file)
         self.literal_to_literal_node = {}
         nn_root = self._recursive_build_network(nnf_root, {}, should_simplify)
         if make_smooth:
             self._enforce_circuit_smoothness(nn_root)
-        return nn_root
+        return nn_root, num_variables
     
     def _build_literal_to_prob_node_mapping(self, json_file):
         probabilities_parser = ProbabilitiesParser(json_file)
+        num_variables = len(probabilities_parser.variable_to_atom)
         literal_to_prob = probabilities_parser.variable_to_prob
-        return {literal: ConstantNode(prob) for literal, prob in literal_to_prob.items()}
+        return {literal: ConstantNode(prob) for literal, prob in literal_to_prob.items()}, num_variables
     
     def _recursive_build_network(self, node, node_cache, should_simplify):
         """

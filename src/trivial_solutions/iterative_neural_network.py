@@ -12,7 +12,7 @@ class IterativeNN(nn.Module):
     def __init__(self, sdd_file, json_file, should_simplify=True, make_smooth=True):
         super().__init__()
         network_builder = NetworkBuilder(ORNode, ANDNode)
-        self.root = network_builder.build_network(sdd_file, json_file, should_simplify, make_smooth)
+        self.root, self.num_variables = network_builder.build_network(sdd_file, json_file, should_simplify, make_smooth)
         self.execution_order = self._topological_sort()
 
     def _topological_sort(self):
