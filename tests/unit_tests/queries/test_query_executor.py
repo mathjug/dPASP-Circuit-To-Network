@@ -66,7 +66,7 @@ def create_test_files(tmp_path):
     return _create_files
 
 # --- Test Cases for Successful Queries ---
-# Each tuple: (description, json_data, query_variable, evidence_variables, numerator_result, denominator_result, 
+# Each tuple: (description, json_data, query_variables, evidence_variables, numerator_result, denominator_result, 
 #              expected_numerator_input, expected_denominator_input)
 
 successful_query_test_cases = [
@@ -79,8 +79,8 @@ successful_query_test_cases = [
                 "pvars": []
             }
         },
-        2, [], 0.4, 0.8,
-        [1.0, 1.0, 1.0, 0.0, 1.0, 1.0],  # x2=1
+        [2, 3], [], 0.4, 0.8,
+        [1.0, 1.0, 1.0, 0.0, 1.0, 0.0],  # x2=1, x3=1
         [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]   # all variables marginalized
     ),
     (
@@ -92,7 +92,7 @@ successful_query_test_cases = [
                 "pvars": []
             }
         },
-        2, [1, 4], 0.3, 0.5,
+        [2], [1, 4], 0.3, 0.5,
         [1.0, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0, 0.0],  # x1=1, x2=1, x4=1
         [1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0]   # x1=1, x4=1
     ),
@@ -105,8 +105,8 @@ successful_query_test_cases = [
                 "pvars": []
             }
         },
-        2, [1, 3], 0.3, 0.5,
-        [1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0],  # x1=1, x2=1, x3=1
+        [2, 4], [1, 3], 0.3, 0.5,
+        [1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0],  # x1=1, x2=1, x3=1, x4=1
         [1.0, 0.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0]   # x1=1, x3=1
     ),
     (
@@ -118,14 +118,14 @@ successful_query_test_cases = [
                 "pvars": []
             }
         },
-        2, [], 0.4, 0.8,
+        [2], [], 0.4, 0.8,
         [1.0, 1.0, 1.0, 0.0, 1.0, 1.0],  # x2=1
         [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]   # all variables marginalized
     ),
 ]
 
-@pytest.mark.parametrize("description, json_data, query_variable, evidence_variables, numerator_result, denominator_result, expected_numerator_input, expected_denominator_input", successful_query_test_cases)
-def test_successful_queries(monkeypatch, create_test_files, description, json_data, query_variable, evidence_variables, numerator_result, denominator_result, expected_numerator_input, expected_denominator_input):
+@pytest.mark.parametrize("description, json_data, query_variables, evidence_variables, numerator_result, denominator_result, expected_numerator_input, expected_denominator_input", successful_query_test_cases)
+def test_successful_queries(monkeypatch, create_test_files, description, json_data, query_variables, evidence_variables, numerator_result, denominator_result, expected_numerator_input, expected_denominator_input):
     """
     Tests successful query executions with various configurations.
     """
@@ -138,7 +138,7 @@ def test_successful_queries(monkeypatch, create_test_files, description, json_da
         return mock_nn
 
     executor = QueryExecutor(sdd_file, json_file, mock_nn_implementation)
-    result = executor.execute_query(query_variable=query_variable, evidence_variables=evidence_variables)
+    result = executor.execute_query(query_variables=query_variables, evidence_variables=evidence_variables)
 
     assert result == pytest.approx(numerator_result / denominator_result)
     assert mock_nn.call_count == 2
@@ -150,33 +150,33 @@ def test_successful_queries(monkeypatch, create_test_files, description, json_da
     assert list(denominator_input) == pytest.approx(list(expected_denominator_input))
 
 # --- Test Cases for Error Handling ---
-# Each tuple: (description, json_data, query_variable, evidence_variables, expected_error_type, expected_error_message)
+# Each tuple: (description, json_data, query_variables, evidence_variables, expected_error_type, expected_error_message)
 
 error_test_cases = [
     (
         "Query variable out of bounds (too high)",
         {"atom_mapping": {"1": "a", "2": "b"}, "prob": {"pfacts": [["1", "0.5"], ["2", "0.3"]], "pvars": []}},
-        3, [], ValueError, "Variable \\(X_3\\) out of bounds for tensor of size 2\\."
+        [3], [], ValueError, "Variable \\(X_3\\) out of bounds for tensor of size 2\\."
     ),
     (
         "Query variable out of bounds (zero)",
         {"atom_mapping": {"1": "a", "2": "b"}, "prob": {"pfacts": [["1", "0.5"], ["2", "0.3"]], "pvars": []}},
-        0, [], ValueError, "Variable \\(X_0\\) out of bounds for tensor of size 2\\."
+        [0], [], ValueError, "Variable \\(X_0\\) out of bounds for tensor of size 2\\."
     ),
     (
         "Evidence variable out of bounds (too high)",
         {"atom_mapping": {"1": "a", "2": "b"}, "prob": {"pfacts": [["1", "0.5"], ["2", "0.3"]], "pvars": []}},
-        1, [3], ValueError, "Variable \\(X_3\\) out of bounds for tensor of size 2\\."
+        [1], [3], ValueError, "Variable \\(X_3\\) out of bounds for tensor of size 2\\."
     ),
     (
         "Evidence variable out of bounds (zero)",
         {"atom_mapping": {"1": "a", "2": "b"}, "prob": {"pfacts": [["1", "0.5"], ["2", "0.3"]], "pvars": []}},
-        1, [0], ValueError, "Variable \\(X_0\\) out of bounds for tensor of size 2\\."
+        [1], [0], ValueError, "Variable \\(X_0\\) out of bounds for tensor of size 2\\."
     ),
 ]
 
-@pytest.mark.parametrize("description, json_data, query_variable, evidence_variables, expected_error_type, expected_error_message", error_test_cases)
-def test_error_handling(monkeypatch, create_test_files, description, json_data, query_variable, evidence_variables, expected_error_type, expected_error_message):
+@pytest.mark.parametrize("description, json_data, query_variables, evidence_variables, expected_error_type, expected_error_message", error_test_cases)
+def test_error_handling(monkeypatch, create_test_files, description, json_data, query_variables, evidence_variables, expected_error_type, expected_error_message):
     """
     Tests error handling for various invalid inputs.
     """
@@ -189,28 +189,28 @@ def test_error_handling(monkeypatch, create_test_files, description, json_data, 
     
     executor = QueryExecutor(sdd_file, json_file, mock_nn_implementation)
     with pytest.raises(expected_error_type, match=expected_error_message):
-        executor.execute_query(query_variable=query_variable, evidence_variables=evidence_variables)
+        executor.execute_query(query_variables=query_variables, evidence_variables=evidence_variables)
 
 # --- Test Cases for Zero Denominator ---
-# Each tuple: (description, json_data, query_variable, evidence_variables, mock_logic)
+# Each tuple: (description, json_data, query_variables, evidence_variables, mock_logic)
 
 zero_denominator_test_cases = [
     (
         "Zero denominator without evidence",
         {"atom_mapping": {"1": "a", "2": "b"}, "prob": {"pfacts": [["1", "0.5"], ["2", "0.3"]], "pvars": []}},
-        1, [],
+        [1], [],
         lambda input_tensor: 0.0 if len(input_tensor) == 4 and input_tensor[1] == 1.0 else 0.1
     ),
     (
         "Zero denominator with evidence",
         {"atom_mapping": {"1": "a", "2": "b", "3": "c"}, "prob": {"pfacts": [["1", "0.5"], ["2", "0.3"], ["3", "0.7"]], "pvars": []}},
-        2, [1],
+        [2], [1],
         lambda input_tensor: 0.0 if len(input_tensor) == 6 and input_tensor[3] == 1.0 else 0.1
     ),
 ]
 
-@pytest.mark.parametrize("description, json_data, query_variable, evidence_variables, mock_logic", zero_denominator_test_cases)
-def test_zero_denominator_handling(monkeypatch, create_test_files, description, json_data, query_variable, evidence_variables, mock_logic):
+@pytest.mark.parametrize("description, json_data, query_variables, evidence_variables, mock_logic", zero_denominator_test_cases)
+def test_zero_denominator_handling(monkeypatch, create_test_files, description, json_data, query_variables, evidence_variables, mock_logic):
     """
     Tests that queries with zero denominator return 0.0 without division-by-zero errors.
     """
@@ -230,5 +230,5 @@ def test_zero_denominator_handling(monkeypatch, create_test_files, description, 
         return mock_nn
     
     executor = QueryExecutor(sdd_file, json_file, mock_nn_implementation)
-    result = executor.execute_query(query_variable=query_variable, evidence_variables=evidence_variables)
+    result = executor.execute_query(query_variables=query_variables, evidence_variables=evidence_variables)
     assert result == 0.0

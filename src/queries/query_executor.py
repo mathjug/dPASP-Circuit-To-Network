@@ -24,19 +24,19 @@ class QueryExecutor:
         self.neural_network = nn_implementation(sdd_file, json_file)
         self.num_variables = self.neural_network.num_variables
     
-    def execute_query(self, query_variable, evidence_variables = []):
+    def execute_query(self, query_variables, evidence_variables = []):
         """
         Executes a conditional probability query.
 
         Args:
-            query_variable (int): The ID of the variable to query (e.g., P(X_i=1 | ...)).
+            query_variables (list): The IDs of the variables to query (e.g., P(X_i=1, X_j=1 | ...)).
             evidence_variables (list): The IDs of the variables to use as evidence (e.g., [X_j=1, X_k=1]).
         
         Returns:
-            float: The calculated conditional probability P(query_variable | evidence).
+            float: The calculated conditional probability P(query_variables | evidence).
         """
         numerator_input, denominator_input = self._build_input_tensors(
-            query_variable,
+            query_variables,
             evidence_variables if evidence_variables is not None else []
         )
 
@@ -51,7 +51,7 @@ class QueryExecutor:
             return 0.
         return float(numerator_prob / denominator_prob)
     
-    def _build_input_tensors(self, query_variable, evidence_variables):
+    def _build_input_tensors(self, query_variables, evidence_variables):
         """
         Builds the input tensors for the numerator and denominator of the conditional probability.
         The input tensor is indexed as [1, -1, 2, -2, ..., n, -n] for n variables.
@@ -59,9 +59,10 @@ class QueryExecutor:
         numerator_input = torch.ones(self.num_variables * 2, dtype=torch.float32)
         denominator_input = torch.ones(self.num_variables * 2, dtype=torch.float32)
 
-        neg_index, pos_index = self._get_indexes_of_literals(query_variable)
-        numerator_input[neg_index] = 0.
-        numerator_input[pos_index] = 1.
+        for query_variable in query_variables:
+            neg_index, pos_index = self._get_indexes_of_literals(query_variable)
+            numerator_input[neg_index] = 0.
+            numerator_input[pos_index] = 1.
 
         for evidence_variable in evidence_variables:
             neg_index, pos_index = self._get_indexes_of_literals(evidence_variable)
