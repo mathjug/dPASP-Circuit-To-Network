@@ -165,7 +165,7 @@ class NetworkBuilder:
         Creates a tautology node.
         """
         input_index = 2 * (variable - 1)
-        negative_literal = self.literal_to_literal_node.get((variable, True), LiteralNodeModule(variable, input_index + 1, True))
-        positive_literal = self.literal_to_literal_node.get((variable, False), LiteralNodeModule(variable, input_index, False))
+        negative_literal = self.literal_to_literal_node.setdefault((variable, True), LiteralNodeModule(variable, input_index + 1, True))
+        positive_literal = self.literal_to_literal_node.setdefault((variable, False), LiteralNodeModule(variable, input_index, False))
         children_nodes = [negative_literal, positive_literal]
         return self.or_node_class(children_nodes)
