@@ -190,7 +190,8 @@ def test_network_builder_no_duplicates(node_type, description, sdd_file, json_fi
     full_description = f"{description} ({implementation_name} Implementation)"
     print(f"Testing network builder: {full_description}")
 
-    neural_network_root, _ = NetworkBuilder(node_type[0], node_type[1]).build_network(sdd_file, json_file, should_simplify, False)
+    build_network_response = NetworkBuilder(node_type[0], node_type[1]).build_network(sdd_file, json_file, should_simplify, False)
+    neural_network_root = build_network_response.get_nn_root()
     actual_counts = count_unique_nodes(neural_network_root)
     
     assert actual_counts == expected_counts, (
@@ -206,8 +207,10 @@ def test_network_builder_node_caching():
     sdd_file = os.path.join(circuit_dir, "memoization_test.sdd")
     json_file = os.path.join(circuit_dir, "memoization_test.json")
     
-    nn1, _ = NetworkBuilder(RecursiveORNode, RecursiveANDNode).build_network(sdd_file, json_file, False, False)
-    nn2, _ = NetworkBuilder(RecursiveORNode, RecursiveANDNode).build_network(sdd_file, json_file, False, False)
+    build_network_response = NetworkBuilder(RecursiveORNode, RecursiveANDNode).build_network(sdd_file, json_file, False, False)
+    nn1 = build_network_response.get_nn_root()
+    build_network_response = NetworkBuilder(RecursiveORNode, RecursiveANDNode).build_network(sdd_file, json_file, False, False)
+    nn2 = build_network_response.get_nn_root()
     counts1 = count_unique_nodes(nn1)
     counts2 = count_unique_nodes(nn2)
     

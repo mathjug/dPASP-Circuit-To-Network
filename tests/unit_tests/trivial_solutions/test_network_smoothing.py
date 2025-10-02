@@ -62,7 +62,8 @@ def test_descendant_variables(description, sdd_file, json_file, expected_descend
     """
     print(f"Testing descendant variables: {description}")
 
-    neural_network_root, _ = NetworkBuilder(IterativeORNode, IterativeANDNode).build_network(sdd_file, json_file, make_smooth=False)
+    build_network_response = NetworkBuilder(IterativeORNode, IterativeANDNode).build_network(sdd_file, json_file, make_smooth=False)
+    neural_network_root = build_network_response.get_nn_root()
     all_nodes = collect_all_nodes(neural_network_root)
     
     assert len(all_nodes) == len(expected_descendant_variables), (

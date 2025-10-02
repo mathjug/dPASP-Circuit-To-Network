@@ -11,8 +11,26 @@ class RecursiveNN(nn.Module):
     def __init__(self, sdd_file, json_file, should_simplify=True, make_smooth=True):
         super().__init__()
         network_builder = NetworkBuilder(ORNode, ANDNode)
-        self.root, self.num_variables = network_builder.build_network(sdd_file, json_file, should_simplify, make_smooth)
+        build_network_response = network_builder.build_network(sdd_file, json_file, should_simplify, make_smooth)
+        self.root = build_network_response.get_nn_root()
+        self.num_variables = build_network_response.get_num_variables()
+        self.literal_to_prob_node = build_network_response.get_literal_to_prob_node()
 
     def forward(self, x):
+        """
+        Executes the forward pass recursively from the root node, with memoization.
+        
+        Args:
+            x (torch.Tensor): The input tensor for the network.
+
+        Returns:
+            torch.Tensor: The final output from the root node.
+        """
         memoization_cache = {}
         return self.root.forward(x, memoization_cache)
+    
+    def get_literal_to_prob_node(self):
+        """
+        Returns the mapping of literals to their probability nodes.
+        """
+        return self.literal_to_prob_node

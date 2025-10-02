@@ -2,9 +2,9 @@ from src.trivial_solutions.entities.literal_node import LiteralNodeModule
 from src.trivial_solutions.entities.true_node import TrueNode
 from src.trivial_solutions.entities.false_node import FalseNode
 from src.trivial_solutions.entities.constant_node import ConstantNode
+from src.trivial_solutions.entities.network_builder import BuildNetworkResponse
 
 import src.parser.nnf_parser as nnf
-
 from src.parser.nnf_parser import NNFParser
 from src.parser.probabilities_parser import ProbabilitiesParser
 
@@ -36,16 +36,16 @@ class NetworkBuilder:
             make_smooth (bool): Whether to transform the network to make it represent a smooth circuit
         
         Returns:
-            The instantiated neural network
-            The number of variables in the network
+            BuildNetworkResponse: An object containing the neural network, number of variables, and mapping
+                of literals to probability nodes.
         """
         nnf_root = NNFParser().parse(sdd_file)
         self.literal_to_prob_node, num_variables = self._build_literal_to_prob_node_mapping(json_file)
-        self.literal_to_literal_node = {}
+        self.literal_to_literal_node = {} # maps literal to its literal node
         nn_root = self._recursive_build_network(nnf_root, {}, should_simplify)
         if make_smooth:
             self._enforce_circuit_smoothness(nn_root)
-        return nn_root, num_variables
+        return BuildNetworkResponse(nn_root, num_variables, self.literal_to_prob_node)
     
     def _build_literal_to_prob_node_mapping(self, json_file):
         probabilities_parser = ProbabilitiesParser(json_file)
