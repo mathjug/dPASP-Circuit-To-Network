@@ -24,12 +24,14 @@ class ConstantNode(nn.Module):
             x (torch.Tensor): The input tensor.
         """
         batch_size = 1 if x.dim() == 1 else x.shape[0]
-        
-        prob_value = self.get_constant()
-        if self.is_learnable():
-            prob_value = torch.sigmoid(self.get_constant())
 
-        return torch.full((batch_size, 1), prob_value, device=x.device, dtype=torch.float32)
+        const_value = self.get_constant()
+        if self.is_learnable():
+            const_value = torch.sigmoid(const_value)
+        else:
+            const_value = torch.tensor(const_value, dtype=x.dtype, device=x.device)
+
+        return const_value.expand(batch_size, 1)
     
     def get_constant(self):
         """

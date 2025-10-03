@@ -27,12 +27,14 @@ class ProbabilityOptimizer:
             num_epochs (int): The number of epochs to train.
         
         Returns:
+            dict: Dictionary of literals to their optimized probabilities
             float: The final loss of the training loop.
         """
         self._add_learnable_parameter_to_network(literal_to_learn)
         self._validate_hyperparameters(learning_rate, num_epochs)
         final_loss = self._run_training_loop(X_train, y_train, learning_rate, num_epochs)
-        return final_loss
+        final_learned_probs = self._get_learned_probabilities()
+        return final_learned_probs, final_loss
     
     def _add_learnable_parameter_to_network(self, literal):
         """
@@ -66,8 +68,7 @@ class ProbabilityOptimizer:
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            if (epoch + 1) % 10 == 0:
-                print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
+            self._print_progress(epoch, num_epochs, loss.item())
         return loss.item()
     
     def _get_learnable_parameters(self):
@@ -82,3 +83,22 @@ class ProbabilityOptimizer:
             if prob_node.is_learnable():
                 learnable_params.append(prob_node.get_constant())
         return learnable_params
+    
+    def _get_learned_probabilities(self):
+        """
+        Collects all learned probabilities from probability nodes in the network.
+        """
+        learned_probs = {}
+        for literal, prob_node in self.literal_to_prob_node.items():
+            if prob_node.is_learnable():
+                learned_probs[literal] = torch.sigmoid(prob_node.get_constant())
+        return learned_probs
+    
+    def _print_progress(self, epoch, num_epochs, loss):
+        """
+        Prints the progress of the training loop every 10% of epochs.
+        """
+        progress_interval = max(1, num_epochs // 10)
+        if (epoch + 1) % progress_interval == 0:
+            percentage = int((epoch + 1) / num_epochs * 100)
+            print(f'[{percentage}%] Epoch [{epoch+1}/{num_epochs}], Loss: {loss:.6f}')

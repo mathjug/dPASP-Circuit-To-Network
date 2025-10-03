@@ -43,6 +43,12 @@ class IterativeNN(nn.Module):
             
         return node_outputs[id(self.root)]
     
+    def get_num_variables(self):
+        """
+        Returns the number of variables in the neural network.
+        """
+        return self.num_variables
+    
     def get_literal_to_prob_node(self):
         """
         Returns the mapping of literals to their probability nodes.

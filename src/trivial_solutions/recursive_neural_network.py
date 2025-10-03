@@ -29,6 +29,12 @@ class RecursiveNN(nn.Module):
         memoization_cache = {}
         return self.root.forward(x, memoization_cache)
     
+    def get_num_variables(self):
+        """
+        Returns the number of variables in the neural network.
+        """
+        return self.num_variables
+    
     def get_literal_to_prob_node(self):
         """
         Returns the mapping of literals to their probability nodes.
