@@ -15,14 +15,13 @@ class ProbabilityOptimizer:
         self.neural_network = neural_network
         self.literal_to_prob_node = neural_network.get_literal_to_prob_node()
 
-    def learn_probability(self, literal_to_learn, X_train, y_train, learning_rate=0.01, num_epochs=100):
+    def learn_probability(self, literals_to_learn, X_train, learning_rate=0.01, num_epochs=100):
         """
         Learns the probability of a literal in the network.
 
         Args:
-            literal_to_learn (int): The literal to learn the probability of.
+            literals_to_learn (list[int]): The literals to learn the probability of.
             X_train (torch.Tensor): The input tensor for the network.
-            y_train (torch.Tensor): The output tensor for the network.
             learning_rate (float): The learning rate for the optimizer.
             num_epochs (int): The number of epochs to train.
         
@@ -30,21 +29,22 @@ class ProbabilityOptimizer:
             dict: Dictionary of literals to their optimized probabilities
             float: The final loss of the training loop.
         """
-        self._add_learnable_parameter_to_network(literal_to_learn)
+        self._add_learnable_parameters_to_network(literals_to_learn)
         self._validate_hyperparameters(learning_rate, num_epochs)
-        final_loss = self._run_training_loop(X_train, y_train, learning_rate, num_epochs)
+        final_loss = self._run_training_loop(X_train, learning_rate, num_epochs)
         final_learned_probs = self._get_learned_probabilities()
         return final_learned_probs, final_loss
     
-    def _add_learnable_parameter_to_network(self, literal):
+    def _add_learnable_parameters_to_network(self, literals):
         """
-        Adds a learnable parameter to the network for a given literal.
+        Adds learnable parameters to the network for a given list of literals.
         """
-        if literal not in self.literal_to_prob_node:
-            raise ValueError(f"Literal {literal} not found in the network as a probabilistic node")
-        prob_node = self.literal_to_prob_node[literal]
-        learnable_parameter = nn.Parameter(torch.tensor(0.0))
-        prob_node.set_constant(learnable_parameter)
+        for literal in literals:
+            if literal not in self.literal_to_prob_node:
+                raise ValueError(f"Literal {literal} not found in the network as a probabilistic node")
+            prob_node = self.literal_to_prob_node[literal]
+            learnable_parameter = nn.Parameter(torch.tensor(0.0))
+            prob_node.set_constant(learnable_parameter)
     
     def _validate_hyperparameters(self, learning_rate, num_epochs):
         """
@@ -55,16 +55,14 @@ class ProbabilityOptimizer:
         if num_epochs <= 0:
             raise ValueError(f"Number of epochs must be positive, got {num_epochs}")
 
-    def _run_training_loop(self, X_train, y_train, learning_rate, num_epochs):
+    def _run_training_loop(self, X_train, learning_rate, num_epochs):
         """
         Runs the training loop for the network.
         """
-        loss_function = nn.MSELoss() # Mean Squared Error Loss
         optimizer = optim.SGD(self._get_learnable_parameters(), lr=learning_rate)
         for epoch in range(num_epochs):
             outputs = self.neural_network.forward(X_train)
-            loss = loss_function(outputs, y_train)
-
+            loss = negative_log_likelihood_loss(outputs)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -102,3 +100,18 @@ class ProbabilityOptimizer:
         if (epoch + 1) % progress_interval == 0:
             percentage = int((epoch + 1) / num_epochs * 100)
             print(f'[{percentage}%] Epoch [{epoch+1}/{num_epochs}], Loss: {loss:.6f}')
+
+def negative_log_likelihood_loss(probs):
+    """
+    Computes the Negative Log-Likelihood Loss for models that output probabilities directly.
+
+    Args:
+        probs (torch.Tensor): Tensor of shape (batch, 1), values in (0, 1]
+    
+    Returns:
+        float: loss = -mean(log(probs))
+    """
+    log_probs = torch.log(probs.clamp(min=1e-12))
+    nll = -log_probs
+    return nll.mean()
+    
