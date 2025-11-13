@@ -4,7 +4,7 @@ from src.network_converter.entities.false_node import FalseNode
 from src.network_converter.entities.constant_node import ConstantNode
 from src.network_converter.entities.network_builder import BuildNetworkResponse
 
-import src.parser.sdd_parser as nnf
+import src.parser.sdd_parser as sdd
 from src.parser.sdd_parser import SDDParser
 from src.parser.probabilities_parser import ProbabilitiesParser
 
@@ -39,10 +39,10 @@ class NetworkBuilder:
             BuildNetworkResponse: An object containing the neural network, number of variables, and mapping
                 of literals to probability nodes.
         """
-        nnf_root = SDDParser().parse(sdd_file)
+        sdd_root = SDDParser().parse(sdd_file)
         self.literal_to_prob_node, num_variables = self._build_literal_to_prob_node_mapping(json_file)
         self.literal_to_literal_node = {} # maps literal to its literal node
-        nn_root = self._recursive_build_network(nnf_root, {}, should_simplify)
+        nn_root = self._recursive_build_network(sdd_root, {}, should_simplify)
         if make_smooth:
             self._enforce_circuit_smoothness(nn_root)
         return BuildNetworkResponse(nn_root, num_variables, self.literal_to_prob_node)
@@ -60,16 +60,16 @@ class NetworkBuilder:
         if node.id in node_cache:
             return node_cache[node.id]
         
-        if isinstance(node, nnf.LiteralNode):
+        if isinstance(node, sdd.LiteralNode):
             nn_node = self._create_literal_node(node)
-        elif isinstance(node, nnf.TrueNode):
+        elif isinstance(node, sdd.TrueNode):
             nn_node = TrueNode()
-        elif isinstance(node, nnf.FalseNode):
+        elif isinstance(node, sdd.FalseNode):
             nn_node = FalseNode()
-        elif isinstance(node, nnf.AndNode):
+        elif isinstance(node, sdd.AndNode):
             children_nodes = [self._recursive_build_network(child, node_cache, should_simplify) for child in node.children]
             nn_node = self._create_and_node(node.id, children_nodes, should_simplify)
-        elif isinstance(node, nnf.OrNode):
+        elif isinstance(node, sdd.OrNode):
             children_nodes = [self._recursive_build_network(child, node_cache, should_simplify) for child in node.children]
             nn_node = self._create_or_node(node.id, children_nodes, should_simplify)
         else:
