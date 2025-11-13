@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from src.trivial_solutions.entities.literal_node import LiteralNodeModule
+from src.network_converter.entities.literal_node import LiteralNodeModule
 
 class BaseANDNode(nn.Module):
     """

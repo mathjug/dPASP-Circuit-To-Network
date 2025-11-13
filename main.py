@@ -1,5 +1,5 @@
 from src.queries.query_executor import QueryExecutor
-from src.trivial_solutions.iterative_neural_network import IterativeNN
+from src.network_converter.iterative_neural_network import IterativeNN
 from src.optimizer.dataset_generator import AlarmDatasetGenerator
 from src.optimizer.probability_optimizer import ProbabilityOptimizer
 

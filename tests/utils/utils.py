@@ -1,7 +1,7 @@
 import torch
 from collections import defaultdict
-from src.trivial_solutions.iterative_neural_network import IterativeNN
-from src.trivial_solutions.recursive_neural_network import RecursiveNN
+from src.network_converter.iterative_neural_network import IterativeNN
+from src.network_converter.recursive_neural_network import RecursiveNN
 
 implementations = [
     {

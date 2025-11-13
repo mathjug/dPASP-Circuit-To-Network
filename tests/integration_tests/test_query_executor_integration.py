@@ -3,7 +3,7 @@ This file contains integration tests for computing conditional probabilities usi
 the QueryExecutor class.
 
 Specifically, this test ensures the end-to-end pipeline is functional:
-1.  The `NNFParser` correctly parses a `.sdd` file.
+1.  The `SDDParser` correctly parses a `.sdd` file.
 2.  The `ProbabilitiesParser` correctly parses a corresponding `.json` file.
 3.  The real `RecursiveNN` and `IterativeNN` classes are instantiated with the circuit.
 4.  The `QueryExecutor` correctly uses these components to perform two `forward` passes

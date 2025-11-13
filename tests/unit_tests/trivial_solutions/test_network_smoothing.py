@@ -13,9 +13,9 @@ the expected descendant_variables sets.
 import pytest
 import os
 
-from src.trivial_solutions.network_builder import NetworkBuilder
-from src.trivial_solutions.entities.or_node import IterativeORNode
-from src.trivial_solutions.entities.and_node import IterativeANDNode
+from src.network_converter.network_builder import NetworkBuilder
+from src.network_converter.entities.or_node import IterativeORNode
+from src.network_converter.entities.and_node import IterativeANDNode
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
 circuit_dir = os.path.join(test_dir, "test_circuits")

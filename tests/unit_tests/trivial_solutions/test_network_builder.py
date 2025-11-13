@@ -13,11 +13,11 @@ the resulting neural network contains the expected number of unique modules.
 import pytest
 import os
 
-from src.trivial_solutions.network_builder import NetworkBuilder
-from src.trivial_solutions.entities.or_node import RecursiveORNode
-from src.trivial_solutions.entities.and_node import RecursiveANDNode
-from src.trivial_solutions.entities.or_node import IterativeORNode
-from src.trivial_solutions.entities.and_node import IterativeANDNode
+from src.network_converter.network_builder import NetworkBuilder
+from src.network_converter.entities.or_node import RecursiveORNode
+from src.network_converter.entities.and_node import RecursiveANDNode
+from src.network_converter.entities.or_node import IterativeORNode
+from src.network_converter.entities.and_node import IterativeANDNode
 from tests.utils.utils import count_unique_nodes
 
 test_dir = os.path.dirname(os.path.abspath(__file__))

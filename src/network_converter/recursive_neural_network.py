@@ -1,8 +1,8 @@
 from torch import nn
 
-from src.trivial_solutions.entities.or_node import RecursiveORNode as ORNode
-from src.trivial_solutions.entities.and_node import RecursiveANDNode as ANDNode
-from src.trivial_solutions.network_builder import NetworkBuilder
+from src.network_converter.entities.or_node import RecursiveORNode as ORNode
+from src.network_converter.entities.and_node import RecursiveANDNode as ANDNode
+from src.network_converter.network_builder import NetworkBuilder
 
 class RecursiveNN(nn.Module):
     """

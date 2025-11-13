@@ -1,7 +1,7 @@
 """
 This module provides a parser for reading a circuit representation from a file
 in Negation Normal Form (NNF), specifically tailored for the Sentential Decision
-Diagram (SDD) format. The primary component is the `NNFParser` class, which is
+Diagram (SDD) format. The primary component is the `SDDParser` class, which is
 responsible for parsing the file and constructing an in-memory graph
 representation of the logical circuit.
 
@@ -18,7 +18,7 @@ that define the logical structure of the circuit. The supported node types are:
 
 import os
 
-class NNFParser:
+class SDDParser:
     """
     A parser for reading NNF/SDD files and constructing a circuit graph in memory.
 

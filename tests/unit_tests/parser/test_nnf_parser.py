@@ -1,8 +1,8 @@
 import pytest
-from src.parser.nnf_parser import NNFParser, AndNode, OrNode, LiteralNode, TrueNode, FalseNode
+from src.parser.sdd_parser import SDDParser, AndNode, OrNode, LiteralNode, TrueNode, FalseNode
 
 # ----------------------------------------------------------------------------
-# Test Cases for NNFParser
+# Test Cases for SDDParser
 # ----------------------------------------------------------------------------
 
 TEST_FILE_SIMPLE_AND = """
@@ -78,8 +78,8 @@ D 0 3 2 1 6 16 18
 
 @pytest.fixture
 def parser():
-    """Provides a fresh NNFParser instance for each test."""
-    return NNFParser()
+    """Provides a fresh SDDParser instance for each test."""
+    return SDDParser()
 
 @pytest.fixture
 def create_test_file(tmp_path):

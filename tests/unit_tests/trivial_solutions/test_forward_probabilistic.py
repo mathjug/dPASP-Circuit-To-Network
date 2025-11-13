@@ -10,7 +10,6 @@ import pytest
 import tempfile
 import os
 
-import src.parser.nnf_parser as nnf
 from tests.utils.utils import implementations
 
 # Get the directory where this test file is located
